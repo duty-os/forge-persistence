@@ -1,0 +1,29 @@
+{
+    "compilerOptions": {
+        "rootDirs": ["src"],
+        "preserveSymlinks": true,
+        "declaration": true,
+        "sourceMap": true,
+        "outDir": "lib",
+        "lib": [
+            "dom",
+            "dom.iterable",
+            "esnext"
+        ],
+        "allowSyntheticDefaultImports": true,
+        "allowJs": true,
+        "target": "es2019",
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "strictNullChecks": true
+    },
+    "exclude": [
+        "node_modules",
+        "node_modules/@types",
+        "scripts"
+    ]
+}
