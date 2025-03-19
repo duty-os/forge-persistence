@@ -41,7 +41,6 @@ export class FileLogger implements LoggerHandler, Logger {
   handler(jsonedLog: string) {
     console.log(jsonedLog);
     this.stream.write(jsonedLog + "\r\n");
-    this.stream.end();
   }
 
   log(level: "debug" | "info" | "warn" | "error", msg: string, error?: Error, ctx?: any) {
@@ -64,7 +63,7 @@ export class FileLogger implements LoggerHandler, Logger {
   }
 
   public info(msg: string, ctx?: any) {
-    this.log("info", msg, ctx);
+    this.log("info", msg, undefined , ctx);
   }
   public warn(msg: string, error?: Error, ctx?: any) {
     this.log("warn", msg, error, ctx);

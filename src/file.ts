@@ -20,6 +20,7 @@ export class LocalClientLoggerHandler {
     this.streams.forEach((v, k) => {
       if (curr - v.timestamp > 10 * 60 * 1000) {
         // 清理大于10分钟的文件句柄
+        v.stream.end();
         v.stream.close();
         this.streams.delete(k);
       }
@@ -37,7 +38,6 @@ export class LocalClientLoggerHandler {
     }
     stream.timestamp = curr;
     stream.stream.write(JSON.stringify(logs) + '\r\n');
-    stream.stream.end();
   }
 
 }

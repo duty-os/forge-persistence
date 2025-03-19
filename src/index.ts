@@ -39,8 +39,8 @@ expressObject.get("/:roomId/snapshots/latest.snapshot", async (req, res) => {
         res.set('Content-Type', 'application/octet-stream');
 
         res.end(buffer, 'binary');
-    } catch (ex) {
-        logger.error(`fetch snapshot error, roomId: ${req.params.roomId}`, ex);
+    } catch (ex: any) {
+        logger.error(`fetch snapshot error, roomId: ${req.params.roomId}`, ex as Error);
         res.status(500);
         res.send({
             error: ex.message,
@@ -84,7 +84,7 @@ expressObject.put("/snapshot", async (req, res) => {
             const uploadBuffer = Buffer.from(buf);
 
             // todo 自行决定保存位置
-            console.log("房间 uuid: ", roomId);
+            logger.info("房间 uuid: " + roomId);
             // console.log("快照: ", uploadBuffer);
             snapshotHandler.putSnapshot(roomId, uploadBuffer);
         }
@@ -97,21 +97,22 @@ expressObject.put("/snapshot", async (req, res) => {
 // 保存客户端上传的历史记录
 expressObject.put("/history", async (req, res) => {
     try {
-        const raw = await getRawBody(req);
-        const body = new Uint8Array(raw);
-        const decoder = new RawDecoder();
-        let updates = decoder.decodeHistory(body);
+        // TODO
+        // const raw = await getRawBody(req);
+        // const body = new Uint8Array(raw);
+        // const decoder = new RawDecoder();
+        // let updates = decoder.decodeHistory(body);
 
-        if (updates.length > 0) {
-            const now = Date.now();
-            updates = decoder.checkTimestamp(updates, now);
-            const uint8Buffer = decoder.encodeHistory(updates);
+        // if (updates.length > 0) {
+        //     const now = Date.now();
+        //     updates = decoder.checkTimestamp(updates, now);
+        //     const uint8Buffer = decoder.encodeHistory(updates);
 
             // todo 自行决定保存位置
             // console.log("房间 uuid: ", decoder.roomId);
             // console.log("用户 uuid: ", decoder.userId);
             // console.log("历史记录: ", uint8Buffer);
-        }
+        // }
         res.status(200).send({ status: "ok" });
     } catch (e) {
         res.status(500).send({ status: "fail" });
@@ -119,12 +120,12 @@ expressObject.put("/history", async (req, res) => {
 });
 
 expressObject.listen(3000, () => {
-    console.log(`app listening at http://localhost:3000`);
+    logger.info(`app listening at http://0.0.0.0:3000`);
 });
 
 process.on("uncaughtException", (error: Error): any => {
-    console.log("[uncaughtException]", error);
+    logger.error("[uncaughtException]", error);
 });
 process.on("unhandledRejection", (error: Error): any => {
-    console.log("[unhandledRejection]", error);
+    logger.error("[unhandledRejection]", error);
 });

@@ -6,3 +6,6 @@ logs
 src/test.ts
 testdata.snapshot
 *.tar
+deploy
+config
+buildpack.sh

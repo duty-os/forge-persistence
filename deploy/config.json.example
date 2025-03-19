@@ -1,6 +1,6 @@
 {
   "serviceType": "localFile",
-  "snapshotHost": "http://localhost:3000",
+  "snapshotHost": "http://localhost:3000", // 改成前端访问persistence的地址,即前端的endpoint参数地址
   "localFile": {
     "snapshotDataPath": "./data",
     "logFilePath": "./logs/server.log",

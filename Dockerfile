@@ -1,6 +1,6 @@
 FROM node:20-slim
 
-RUN apt update && apt install net-tools && apt install curl -y && npm install -g yarn ts-node
+RUN apt update && apt install net-tools && apt install curl -y && npm install -g ts-node
 
 WORKDIR /app
 
@@ -11,6 +11,6 @@ COPY ./yarn.lock .
 
 RUN yarn install --frozen-lockfile
 
-COPY ./src .
+COPY ./ ./
 
 ENTRYPOINT ["ts-node", "./src/index.ts"]
