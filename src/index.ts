@@ -2,7 +2,7 @@ import express from "express";
 import getRawBody from "raw-body";
 import cors from "cors";
 
-import {resolveConfig} from "./config";
+import {clientLogger, config, logger, snapshotHandler} from "./init";
 import {RawDecoder} from "./RawDecoder";
 
 export const expressObject = express();
@@ -25,8 +25,29 @@ expressObject.get("/health", async (req, res) => {
 // 返回房间快照地址
 expressObject.get("/snapshot/:roomId", async (req, res) => {
     const url = new URL(`${config.snapshotHost}/${req.params.roomId}/snapshots/latest.snapshot`);
-    res.send({ url: url.toString().replace(/^http(s?)/, "https") });
+    res.send({ url: url.toString() });
 });
+
+expressObject.get("/:roomId/snapshots/latest.snapshot", async(req, res) => {
+    try {
+        const buffer = await snapshotHandler.getLatestSnapshot(req.params.roomId)
+        if (buffer === null) {
+            res.status(404);
+            res.end()
+            return
+        }
+        res.set('Content-Type', 'application/octet-stream');
+    
+        res.end(buffer, 'binary')
+    } catch (ex) {
+        logger.error(`fetch snapshot error, roomId: ${req.params.roomId}`, ex)
+        res.status(500)
+        res.send({
+            error: ex.message,
+        })
+        res.end()
+    }
+})
 
 // 记录客户端日志
 expressObject.put("/client/logs", async (req, res) => {
@@ -52,11 +73,8 @@ expressObject.put("/client/logs", async (req, res) => {
             }
         });
     });
-
-    // todo 记录日志
-    console.log(log);
-
-    res.status(200).send({ status: "ok" });
+    clientLogger.putLogs(roomId, logs)
+    res.status(201).end()
 });
 
 // 保存客户端上传的房间快照
@@ -71,10 +89,11 @@ expressObject.put("/snapshot", async (req, res) => {
         if (buf.length > 0) {
             const now = Date.now();
             const uploadBuffer = Buffer.from(buf);
-
+            
             // todo 自行决定保存位置
             console.log("房间 uuid: ", roomId);
-            console.log("快照: ", uploadBuffer);
+            // console.log("快照: ", uploadBuffer);
+            snapshotHandler.putSnapshot(roomId, uploadBuffer)
         }
         res.status(200).send({ status: "ok" });
     } catch (e) {
@@ -96,9 +115,9 @@ expressObject.put("/history", async (req, res) => {
             const uint8Buffer = decoder.encodeHistory(updates);
 
             // todo 自行决定保存位置
-            console.log("房间 uuid: ", decoder.roomId);
-            console.log("用户 uuid: ", decoder.userId);
-            console.log("历史记录: ", uint8Buffer);
+            // console.log("房间 uuid: ", decoder.roomId);
+            // console.log("用户 uuid: ", decoder.userId);
+            // console.log("历史记录: ", uint8Buffer);
         }
         res.status(200).send({ status: "ok" });
     } catch(e) {
@@ -106,8 +125,8 @@ expressObject.put("/history", async (req, res) => {
     }
 });
 
-expressObject.listen(8090, () => {
-    console.log(`app listening at http://localhost:80`)
+expressObject.listen(3000, () => {
+    console.log(`app listening at http://localhost:3000`)
 });
 
 process.on("uncaughtException", (error: Error): any => {

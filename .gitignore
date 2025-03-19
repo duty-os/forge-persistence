@@ -1,3 +1,7 @@
 /.idea/
 node_modules
 lib
+data
+logs
+src/test.ts
+testdata.snapshot
