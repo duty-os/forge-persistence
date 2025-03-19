@@ -1,0 +1,9 @@
+{
+  "serviceType": "localFile",
+  "snapshotHost": "http://localhost:3000",
+  "localFile": {
+    "snapshotDataPath": "./data",
+    "logFilePath": "./logs/server.log",
+    "clientlogPath": "./logs/clientlogs"
+  }
+}

@@ -1,3 +1,5 @@
+import { logger } from "../lib/init";
+
 export class RawDecoder {
 
     private buffer = new Uint8Array(0);
@@ -37,7 +39,7 @@ export class RawDecoder {
     public decodeHistory(buffer: Uint8Array): { timestamp: number, originBuf: Uint8Array, yUpdate: Uint8Array }[] {
         const results: { timestamp: number, originBuf: Uint8Array, yUpdate: Uint8Array  }[] = [];
         let index = this.decodeMeta(buffer, 8);
-        console.log(`decodeHistory meateLength:${index} buffer:${buffer.length}`)
+        logger.debug(`decodeHistory meateLength:${index} buffer:${buffer.length}`);
         while (index < buffer.length) {
             let itemLength = 0;
             // message
