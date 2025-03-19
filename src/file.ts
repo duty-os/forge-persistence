@@ -73,15 +73,15 @@ export class LocalSnapshotHandler {
   }
 
   public async getLatestSnapshot(roomId: string): Promise<Buffer<ArrayBuffer> | null> {
-    const path = this.path + `/${roomId}/latest.snapshot`
+    const path = this.path + `/${roomId}/latest.snapshot`;
     try {
       const buf = await readFile(path);
       return Buffer.from(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer);
-    } catch(err) {
+    } catch (err) {
       if (err.message.indexOf("ENOENT: no such file or directory") > -1) {
         return null;
       } else {
-        throw err
+        throw err;
       }
     }
   }

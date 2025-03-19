@@ -2,8 +2,8 @@ import express from "express";
 import getRawBody from "raw-body";
 import cors from "cors";
 
-import {clientLogger, config, logger, snapshotHandler} from "./init";
-import {RawDecoder} from "./RawDecoder";
+import { clientLogger, config, logger, snapshotHandler } from "./init";
+import { RawDecoder } from "./RawDecoder";
 
 export const expressObject = express();
 
@@ -12,7 +12,12 @@ expressObject.use((req, res, next) => {
     const startTime = Date.now();
     res.on('finish', () => {
         const duration = Date.now() - startTime;
-        console.log("persistence api", req.method, req.originalUrl, res.statusCode, duration);
+        logger.info("persistence api", {
+            method: req.method,
+            origin: req.originalUrl,
+            status: res.statusCode,
+            duration: duration
+        });
     });
     next();
 });
@@ -23,26 +28,26 @@ expressObject.get("/snapshot/:roomId", async (req, res) => {
     res.send({ url: url.toString() });
 });
 
-expressObject.get("/:roomId/snapshots/latest.snapshot", async(req, res) => {
+expressObject.get("/:roomId/snapshots/latest.snapshot", async (req, res) => {
     try {
-        const buffer = await snapshotHandler.getLatestSnapshot(req.params.roomId)
+        const buffer = await snapshotHandler.getLatestSnapshot(req.params.roomId);
         if (buffer === null) {
             res.status(404);
-            res.end()
-            return
+            res.end();
+            return;
         }
         res.set('Content-Type', 'application/octet-stream');
-    
-        res.end(buffer, 'binary')
+
+        res.end(buffer, 'binary');
     } catch (ex) {
-        logger.error(`fetch snapshot error, roomId: ${req.params.roomId}`, ex)
-        res.status(500)
+        logger.error(`fetch snapshot error, roomId: ${req.params.roomId}`, ex);
+        res.status(500);
         res.send({
             error: ex.message,
-        })
-        res.end()
+        });
+        res.end();
     }
-})
+});
 
 // 记录客户端日志
 expressObject.put("/client/logs", async (req, res) => {
@@ -59,10 +64,10 @@ expressObject.put("/client/logs", async (req, res) => {
             contents: Object.keys(completeLog).map(key => {
                 return { key, value: `${completeLog[key]}` };
             })
-        }
+        };
     });
-    clientLogger.putLogs(roomId, logs)
-    res.status(201).end()
+    clientLogger.putLogs(roomId, logs);
+    res.status(201).end();
 });
 
 // 保存客户端上传的房间快照
@@ -77,11 +82,11 @@ expressObject.put("/snapshot", async (req, res) => {
         if (buf.length > 0) {
             const now = Date.now();
             const uploadBuffer = Buffer.from(buf);
-            
+
             // todo 自行决定保存位置
             console.log("房间 uuid: ", roomId);
             // console.log("快照: ", uploadBuffer);
-            snapshotHandler.putSnapshot(roomId, uploadBuffer)
+            snapshotHandler.putSnapshot(roomId, uploadBuffer);
         }
         res.status(200).send({ status: "ok" });
     } catch (e) {
@@ -108,13 +113,13 @@ expressObject.put("/history", async (req, res) => {
             // console.log("历史记录: ", uint8Buffer);
         }
         res.status(200).send({ status: "ok" });
-    } catch(e) {
+    } catch (e) {
         res.status(500).send({ status: "fail" });
     }
 });
 
 expressObject.listen(3000, () => {
-    console.log(`app listening at http://localhost:3000`)
+    console.log(`app listening at http://localhost:3000`);
 });
 
 process.on("uncaughtException", (error: Error): any => {

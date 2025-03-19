@@ -18,10 +18,10 @@ export type Log = {
 };
 
 export interface Logger {
-  info(msg: string, ctx?: any): void
-  warn(msg: string, error?: Error, ctx?: any): void
-  error(msg: string, error?: Error, ctx?: any): void
-  debug(msg: string, ctx?: any): void
+  info(msg: string, ctx?: any): void;
+  warn(msg: string, error?: Error, ctx?: any): void;
+  error(msg: string, error?: Error, ctx?: any): void;
+  debug(msg: string, ctx?: any): void;
 }
 
 export class FileLogger implements LoggerHandler, Logger {
@@ -30,7 +30,7 @@ export class FileLogger implements LoggerHandler, Logger {
   private path: string;
   private stream: import("fs").WriteStream;
 
- constructor(path: string) {
+  constructor(path: string) {
     this.path = path;
     this.globalContext = {
       hostname: hostname(),
@@ -39,12 +39,13 @@ export class FileLogger implements LoggerHandler, Logger {
   }
 
   handler(jsonedLog: string) {
+    console.log(jsonedLog);
     this.stream.write(jsonedLog + "\r\n");
-    this.stream.end()
+    this.stream.end();
   }
 
   log(level: "debug" | "info" | "warn" | "error", msg: string, error?: Error, ctx?: any) {
-    const curr = new Date()
+    const curr = new Date();
     const log: Log = {
       message: msg,
       level: level,

@@ -15,8 +15,8 @@ type Config = {
     };
     snapshotHost: string;
 };
-const configFile = readFileSync("./config/app.json", 'utf8')
-export const config: Config = JSON.parse(configFile)
+const configFile = readFileSync("./config/app.json", 'utf8');
+export const config: Config = JSON.parse(configFile);
 
 export const logger = new FileLogger(config.localFile!.logFilePath);
 export const clientLogger = new LocalClientLoggerHandler(config.localFile!.clientlogPath, logger);
