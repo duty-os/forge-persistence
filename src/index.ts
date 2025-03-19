@@ -6,7 +6,6 @@ import {clientLogger, config, logger, snapshotHandler} from "./init";
 import {RawDecoder} from "./RawDecoder";
 
 export const expressObject = express();
-const config = resolveConfig();
 
 expressObject.use(cors());
 expressObject.use((req, res, next) => {
@@ -16,10 +15,6 @@ expressObject.use((req, res, next) => {
         console.log("persistence api", req.method, req.originalUrl, res.statusCode, duration);
     });
     next();
-});
-
-expressObject.get("/health", async (req, res) => {
-    res.send("ok");
 });
 
 // 返回房间快照地址
@@ -53,25 +48,18 @@ expressObject.get("/:roomId/snapshots/latest.snapshot", async(req, res) => {
 expressObject.put("/client/logs", async (req, res) => {
     const raw = await getRawBody(req);
     const body = JSON.parse(raw.toString());
-
     const { logs: inputLogs, roomId, userId } = body;
-    const logPath = `${config.logsRoot}/${roomId}/${userId}`;
 
     const last = inputLogs[inputLogs.length - 1];
     const offset = Date.now() - last.timestamp;
-
-    let log = "";
-
-    inputLogs.forEach((log: any) => {
-        const time = new Date(Math.floor((log.timestamp + offset))).toISOString();
-        const level = log.level || "info";
-        const message = log.message || "";
-        log += `${time} [${level}] ${message}\n`;
-        Object.keys(log).forEach(key => {
-            if (key !== "timestamp" && key !== "level" && key !== "message") {
-                log += `  ${key}: ${log[key]}\n`;
-            }
-        });
+    const logs = inputLogs.map((log: any) => {
+        const completeLog = { ...log, roomId, userId };
+        return {
+            time: Math.floor((log.timestamp + offset) / 1000),
+            contents: Object.keys(completeLog).map(key => {
+                return { key, value: `${completeLog[key]}` };
+            })
+        }
     });
     clientLogger.putLogs(roomId, logs)
     res.status(201).end()
