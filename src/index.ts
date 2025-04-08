@@ -4,6 +4,8 @@ import cors from "cors";
 
 import { clientLogger, config, logger, snapshotHandler } from "./init";
 import { RawDecoder } from "./RawDecoder";
+import { v4 } from 'uuid'
+import { RtmTokenBuilder } from "./rtm-token/RtmTokenBuilder2"
 
 export const expressObject = express();
 
@@ -118,6 +120,58 @@ expressObject.put("/history", async (req, res) => {
         res.status(500).send({ status: "fail" });
     }
 });
+
+expressObject.post("/v5/rooms", async (req, res) => {
+    try {
+        const raw = await getRawBody(req);
+        const body = JSON.parse(raw.toString());
+
+        const uuid = v4().replaceAll("-", "");
+        res.status(200).send({ uuid, status: "ok", isRecord: false, limit: 0 });
+    } catch (e) {
+        res.status(500).send({ status: "fail", message: e.message });
+    }
+})
+
+expressObject.get("/v5/rooms/:roomId", async (req, res) => {
+    try {
+        const raw = await getRawBody(req);
+        const body = JSON.parse(raw.toString());
+        res.status(200).send({ uuid: req.params.roomId, status: "ok", isRecord: false, limit: 0 });
+    } catch (e) {
+        res.status(500).send({ status: "fail", message: e.message });
+    }
+})
+
+expressObject.patch("/v5/rooms/:roomId", async (req, res) => {
+    try {
+        const raw = await getRawBody(req);
+        const body = JSON.parse(raw.toString());
+        res.status(200).send({ uuid: req.params.roomId, status: "ok", isRecord: false, limit: 0 });
+    } catch (e) {
+        res.status(500).send({ status: "fail", message: e.message });
+    }
+})
+
+expressObject.get("/v5/rooms", async (req, res) => {
+    try {
+        res.status(200).send({ rooms: [], status: "ok" });
+    } catch (e) {
+        res.status(500).send({ status: "fail", message: e.message });
+    }
+})
+
+expressObject.get("/:roomId/:userId/rtm/token", async (req, res) => {
+    try {
+        const { roomId, userId } = req.params;
+        const token = RtmTokenBuilder.buildToken(config.rtm.appId, config.rtm.appCertificate, userId, 24 * 3600);
+        res.status(200).send({ status: "ok", token });
+    } catch (e) {
+        res.status(500).send({ status: "fail", message: e.message });
+    }
+})
+
+
 
 expressObject.listen(3000, () => {
     logger.info(`app listening at http://0.0.0.0:3000`);

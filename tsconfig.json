@@ -19,7 +19,7 @@
         "emitDecoratorMetadata": true,
         "skipLibCheck": true,
         "esModuleInterop": true,
-        "strictNullChecks": true
+        "strictNullChecks": true,
     },
     "exclude": [
         "node_modules",

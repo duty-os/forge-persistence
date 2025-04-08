@@ -4,6 +4,10 @@ import { FileLogger } from "./log";
 
 type Config = {
     serviceType: "localFile" | "aliyun",
+    rtm: {
+        appId: string;
+        appCertificate: string;
+    }
     localFile?: {
         // historyDataPath: string
         snapshotDataPath: string;
