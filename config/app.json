@@ -1,6 +1,10 @@
 {
   "serviceType": "localFile",
   "snapshotHost": "http://localhost:3000",
+  "rtm": {
+    "appId": "d578d862f85a4545bab8d1f416e4fbd2",
+    "appCertificate": "02758e0d31ab45bbb4c4556f54759517"
+  },
   "localFile": {
     "snapshotDataPath": "./data",
     "logFilePath": "./logs/server.log",

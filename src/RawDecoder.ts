@@ -1,4 +1,4 @@
-import { logger } from "../lib/init";
+import { logger } from "./init";
 
 export class RawDecoder {
 

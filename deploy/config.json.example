@@ -1,6 +1,10 @@
 {
   "serviceType": "localFile",
   "snapshotHost": "http://localhost:3000", // 改成前端访问persistence的地址,即前端的endpoint参数地址
+  "rtm": {
+    "appId": "project-appid",
+    "appCertificate": "project-appcertificate"
+  },
   "localFile": {
     "snapshotDataPath": "./data",
     "logFilePath": "./logs/server.log",

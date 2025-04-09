@@ -18,7 +18,8 @@
     "form-data": "^4.0.1",
     "nodejs-on-kubernetes": "1.0.0-beta4",
     "raw-body": "^3.0.0",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
