@@ -1,0 +1,24 @@
+services:
+  forge-persistence:
+    image: "registry.netless.link/app/forge-persistence-private:1.0.1"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./config:/app/config
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 500M
+    ports:
+      - '3000:3000'
+    # network_mode: host
+  # 如果对接需要https的话,建议另外使用统一的反向代理,如果都没有则使用这里自带的nginx,需要自行域名和配置证书
+  # nginx:
+  #   image: nginx:latest
+  #   volumes:
+  #   - type: bind
+  #     source: ./config/nginx.conf
+  #     target: /etc/nginx/nginx.conf
+  #   - ./tls:/etc/
+  #   network_mode: host
