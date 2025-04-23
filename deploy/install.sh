@@ -1,7 +1,7 @@
 #!/bin/bash
 set -ex;
 
-export VERSION=1.0.0
+export VERSION=1.0.2
 
 sudo docker load -i forge-persistence-private-${VERSION}.tar
 

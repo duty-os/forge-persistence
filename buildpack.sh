@@ -1,6 +1,6 @@
 #!/bin/bash
 set -ex;
-export VERSION=1.0.1
+export VERSION=1.0.2
 rm -rf deploy/*.tar
 sudo docker build . -t registry.netless.link/app/forge-persistence-private:$VERSION
 sudo docker pull nginx:latest
