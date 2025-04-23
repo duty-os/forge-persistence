@@ -172,6 +172,17 @@ expressObject.get("/:roomId/:userId/rtm/token", async (req, res) => {
 })
 
 
+expressObject.post("/v5/tokens/rooms/:roomId", async (req, res) => {
+    try {
+        // nonce和sig写死,没有实际校验,后续有需要再处理
+        const { roomId } = req.params;
+        const authString = `ak=private&expireAt=${new Date().getTime() + 365 * 3600 * 1000}&nonce=78f216c0-1ff7-11f0-96a9-ab38861898af&role=1&sig=394dc33829e6502cb84b88396a6690b350b6c2c39de9366798fe2231361ab79e&uuid=${roomId}`
+        res.status(200).send(`"NETLESSROOM_${Buffer.from(authString).toString("base64")}"`);
+    } catch (e) {
+        res.status(500).send({ status: "fail", message: e.message });
+    }
+})
+
 
 expressObject.listen(3000, () => {
     logger.info(`app listening at http://0.0.0.0:3000`);
