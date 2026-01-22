@@ -3,7 +3,8 @@ import getRawBody from "raw-body";
 import cors from "cors";
 
 import { clientLogger, config, logger, snapshotHandler } from "./init";
-import { RawDecoder } from "./RawDecoder";
+import {RawDecoder} from "./RawDecoder";
+import { RawDecoderV2 } from "./RawDecoderV2";
 import { v4 } from 'uuid'
 import { RtmTokenBuilder } from "./rtm-token/RtmTokenBuilder2"
 
@@ -28,6 +29,14 @@ expressObject.use((req, res, next) => {
 expressObject.get("/snapshot/:roomId", async (req, res) => {
     const url = new URL(`${config.snapshotHost}/${req.params.roomId}/snapshots/latest.snapshot`);
     res.send({ url: url.toString() });
+});
+
+expressObject.get("/v2/snapshot/:roomId", async (req, res) => {
+    const url = new URL(`${config.snapshotHost}/${req.params.roomId}/snapshots/latest.snapshot`);
+    res.send({
+        url: url.toString(),
+        now: Date.now(),
+    });
 });
 
 expressObject.get("/:roomId/snapshots/latest.snapshot", async (req, res) => {
@@ -97,23 +106,21 @@ expressObject.put("/snapshot", async (req, res) => {
 });
 
 // 保存客户端上传的历史记录
-expressObject.put("/history", async (req, res) => {
+expressObject.put("/v2/history/:roomId/:userId", async (req, res) => {
     try {
-        // TODO
+        // TODO 按需保存
         // const raw = await getRawBody(req);
         // const body = new Uint8Array(raw);
-        // const decoder = new RawDecoder();
+        // const decoder = new RawDecoderV2();
         // let updates = decoder.decodeHistory(body);
-
+        //
+        // const now = Date.now();
         // if (updates.length > 0) {
         //     const now = Date.now();
         //     updates = decoder.checkTimestamp(updates, now);
         //     const uint8Buffer = decoder.encodeHistory(updates);
-
-            // todo 自行决定保存位置
-            // console.log("房间 uuid: ", decoder.roomId);
-            // console.log("用户 uuid: ", decoder.userId);
-            // console.log("历史记录: ", uint8Buffer);
+        //
+        //     // await storage.putFile(`${roomId}/${userId}/${now}.history`, Buffer.from(uint8Buffer));
         // }
         res.status(200).send({ status: "ok" });
     } catch (e) {
