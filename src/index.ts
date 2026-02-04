@@ -168,7 +168,7 @@ expressObject.get("/v5/rooms", async (req, res) => {
     }
 })
 
-expressObject.get("/:roomId/:userId/rtm/token", async (req, res) => {
+expressObject.post("/:roomId/:userId/rtm/token", async (req, res) => {
     try {
         const { roomId, userId } = req.params;
         const token = RtmTokenBuilder.buildToken(config.rtm.appId, config.rtm.appCertificate, userId, 24 * 3600);
