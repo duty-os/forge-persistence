@@ -1,6 +1,6 @@
 services:
   forge-persistence:
-    image: "registry.netless.link/app/forge-persistence-private:1.0.1"
+    image: "registry.netless.link/app/forge-persistence-private:1.0.3"
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
