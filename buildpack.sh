@@ -10,5 +10,6 @@ docker build . -t registry.netless.link/app/forge-persistence-private:$VERSION
 docker pull nginx:latest
 docker save nginx:latest -o deploy/nginx.tar
 docker save registry.netless.link/app/forge-persistence-private:$VERSION -o deploy/forge-persistence-private-$VERSION.tar
+sed -i "s/export VERSION=.*/export VERSION=$VERSION/" deploy/install.sh deploy/start.sh
 tar -czvf forge-persistence-private-$VERSION-install.tar deploy --transform s/deploy/forge-persistence/
 
