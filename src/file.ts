@@ -3,6 +3,38 @@ import { access, mkdir, readFile, rm } from "fs/promises";
 import path from "path";
 import { Logger } from "./log";
 
+export function validateRoomId(roomId: unknown): string {
+  if (
+    typeof roomId !== "string" ||
+    roomId.length === 0 ||
+    roomId.length > 256 ||
+    roomId === "." ||
+    roomId === ".." ||
+    roomId.includes("/") ||
+    roomId.includes("\\")
+  ) {
+    throw new Error("invalid roomId");
+  }
+  return roomId;
+}
+
+export function validateClientLogsPayload(body: any): {
+  roomId: string;
+  userId: string | undefined;
+  logs: any[];
+} {
+  const roomId = validateRoomId(body?.roomId);
+  const logs = body?.logs;
+  if (!Array.isArray(logs) || logs.length === 0) {
+    throw new Error("client logs payload must include non-empty logs");
+  }
+  return {
+    roomId,
+    userId: body?.userId,
+    logs,
+  };
+}
+
 export class LocalClientLoggerHandler {
 
   private streams: Map<string, { timestamp: number, stream: import("fs").WriteStream; }>;
@@ -14,7 +46,8 @@ export class LocalClientLoggerHandler {
     this.logger = logger;
     this.streams = new Map();
     mkdirSync(`${this.path}`, { recursive: true });
-    setInterval(this.clearStream.bind(this), 60 * 1000);
+    const timer = setInterval(this.clearStream.bind(this), 60 * 1000);
+    timer.unref?.();
   }
   clearStream() {
     const curr = new Date().getTime();
@@ -28,7 +61,8 @@ export class LocalClientLoggerHandler {
     });
   }
 
-  public putLogs(roomId: string, logs: { time: number, contents: Array<any>; }) {
+  public putLogs(roomId: string, logs: Array<{ time: number, contents: Array<any>; }>) {
+    validateRoomId(roomId);
     const curr = new Date().getTime();
     let stream = this.streams.get(roomId);
     if (!stream) {
@@ -48,7 +82,7 @@ export class LocalClientLoggerHandler {
 
   public getActiveLogRelativePaths(): Set<string> {
     return new Set(
-      Array.from(this.streams.keys()).map((roomId) => `logs/clientlogs/${roomId}.log`)
+      Array.from(this.streams.keys()).map((roomId) => `logs/clientlogs/${validateRoomId(roomId)}.log`)
     );
   }
 
@@ -90,6 +124,7 @@ export class LocalSnapshotHandler {
   }
 
   public async putSnapshot(roomId: string, snapshot: Buffer<ArrayBuffer>): Promise<void> {
+    validateRoomId(roomId);
     await mkdir(`${this.path}/${roomId}`, { recursive: true });
     await this.write(`${this.path}/${roomId}/latest.snapshot`, snapshot);
     await this.write(`${this.path}/${roomId}/${new Date().getTime()}.snapshot`, snapshot);
@@ -100,6 +135,7 @@ export class LocalSnapshotHandler {
   }
 
   public async getLatestSnapshot(roomId: string): Promise<Buffer<ArrayBuffer> | null> {
+    validateRoomId(roomId);
     const path = this.path + `/${roomId}/latest.snapshot`;
     try {
       const buf = await readFile(path);

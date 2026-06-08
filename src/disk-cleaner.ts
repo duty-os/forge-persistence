@@ -103,7 +103,15 @@ export function classifyManagedFile(relativePath: string): {
 }
 
 async function fileInfo(filePath: string, relativePath: string): Promise<ManagedFileInfo | null> {
-    const fileStat = await stat(filePath);
+    let fileStat;
+    try {
+        fileStat = await stat(filePath);
+    } catch (e: any) {
+        if (e?.code === "ENOENT") {
+            return null;
+        }
+        throw e;
+    }
     if (!fileStat.isFile()) {
         return null;
     }
@@ -227,7 +235,8 @@ export function planDiskCleanup(input: {
 }): CleanupResult {
     const nowMs = input.nowMs ?? Date.now();
     const activeRelativePaths = input.activeRelativePaths ?? new Set<string>();
-    const files = input.files.filter((file) => !activeRelativePaths.has(file.relativePath));
+    const allFiles = input.files;
+    const deletionCandidates = input.files.filter((file) => !activeRelativePaths.has(file.relativePath));
     const deleteFiles: ManagedFileInfo[] = [];
     const deleted = new Set<string>();
 
@@ -235,8 +244,8 @@ export function planDiskCleanup(input: {
         return { deleteFiles, deletedCount: 0, deletedBytes: 0, overLimit: false, errors: [] };
     }
 
-    let snapshotSize = totalSize(files, ["history-snapshot", "latest-snapshot"]);
-    let logSize = totalSize(files, ["active-server-log", "rotated-server-log", "client-log"]);
+    let snapshotSize = totalSize(allFiles, ["history-snapshot", "latest-snapshot"]);
+    let logSize = totalSize(allFiles, ["active-server-log", "rotated-server-log", "client-log"]);
     let projectedFreeBytes = input.freeBytes ?? gbToBytes(input.policy.minFreeGB);
 
     const markDelete = (file: ManagedFileInfo): void => {
@@ -252,20 +261,20 @@ export function planDiskCleanup(input: {
         }
     };
 
-    files
+    deletionCandidates
         .filter((file) => file.kind === "history-snapshot")
         .filter((file) => ageDays(file, nowMs) > input.policy.maxSnapshotHistoryAgeDays)
         .sort(oldestFirst)
         .forEach(markDelete);
 
-    files
+    deletionCandidates
         .filter((file) => file.kind === "rotated-server-log" || file.kind === "client-log")
         .filter((file) => ageDays(file, nowMs) > input.policy.maxLogAgeDays)
         .sort(oldestFirst)
         .forEach(markDelete);
 
     const maxSnapshotBytes = gbToBytes(input.policy.maxSnapshotGB);
-    files
+    deletionCandidates
         .filter((file) => file.kind === "history-snapshot")
         .sort(oldestFirst)
         .forEach((file) => {
@@ -276,7 +285,7 @@ export function planDiskCleanup(input: {
         });
 
     const maxLogBytes = gbToBytes(input.policy.maxLogGB);
-    files
+    deletionCandidates
         .filter((file) => file.kind === "rotated-server-log" || file.kind === "client-log")
         .sort(oldestFirst)
         .forEach((file) => {
@@ -288,9 +297,9 @@ export function planDiskCleanup(input: {
 
     const minFreeBytes = gbToBytes(input.policy.minFreeGB);
     const emergencyCandidates = [
-        ...files.filter((file) => file.kind === "history-snapshot").sort(oldestFirst),
-        ...files.filter((file) => file.kind === "rotated-server-log" || file.kind === "client-log").sort(oldestFirst),
-        ...files
+        ...deletionCandidates.filter((file) => file.kind === "history-snapshot").sort(oldestFirst),
+        ...deletionCandidates.filter((file) => file.kind === "rotated-server-log" || file.kind === "client-log").sort(oldestFirst),
+        ...deletionCandidates
             .filter((file) => file.kind === "latest-snapshot")
             .filter((file) => input.policy.allowDeleteLatestSnapshot)
             .filter((file) => ageDays(file, nowMs) > input.policy.deleteLatestAfterDays)
@@ -305,11 +314,11 @@ export function planDiskCleanup(input: {
 
     const deletedBytes = deleteFiles.reduce((sum, file) => sum + file.size, 0);
     const remainingSnapshotSize = totalSize(
-        files.filter((file) => !deleted.has(file.path)),
+        allFiles.filter((file) => !deleted.has(file.path)),
         ["history-snapshot", "latest-snapshot"]
     );
     const remainingLogSize = totalSize(
-        files.filter((file) => !deleted.has(file.path)),
+        allFiles.filter((file) => !deleted.has(file.path)),
         ["active-server-log", "rotated-server-log", "client-log"]
     );
     const overLimit =

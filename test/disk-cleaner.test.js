@@ -1,10 +1,12 @@
 const assert = require("assert");
 const fs = require("fs");
+const fsPromises = require("fs/promises");
 const os = require("os");
 const path = require("path");
 const {
   DEFAULT_DISK_RETENTION_POLICY,
   classifyManagedFile,
+  scanManagedFiles,
   planDiskCleanup,
   cleanupDisk,
 } = require("../lib/disk-cleaner");
@@ -142,6 +144,25 @@ assert.deepStrictEqual(classifyManagedFile("logs/clientlogs/room-a.log"), {
 {
   const result = planDiskCleanup({
     files: [
+      item("logs/clientlogs/active-room.log", 30, 1000),
+    ],
+    policy: {
+      ...DEFAULT_DISK_RETENTION_POLICY,
+      maxLogAgeDays: 14,
+      maxLogGB: 0.0000001,
+    },
+    nowMs: now,
+    freeBytes: 1000,
+    activeRelativePaths: new Set(["logs/clientlogs/active-room.log"]),
+  });
+
+  assert.deepStrictEqual(result.deleteFiles.map((file) => file.relativePath), []);
+  assert.strictEqual(result.overLimit, true);
+}
+
+{
+  const result = planDiskCleanup({
+    files: [
       item("data/room-a/old.snapshot", 20, 1000),
     ],
     policy: {
@@ -201,6 +222,34 @@ function writeFile(root, relativePath, content, ageDays) {
   assert.strictEqual(fs.existsSync(path.join(root, "logs/clientlogs/room-a.log")), false);
 
   fs.rmSync(root, { recursive: true, force: true });
+
+  const disappearingRoot = fs.mkdtempSync(path.join(os.tmpdir(), "disk-cleaner-disappearing-"));
+  const disappearingLog = writeFile(disappearingRoot, "logs/clientlogs/disappearing.log", "client", 1);
+  const originalStat = fsPromises.stat;
+  fsPromises.stat = async (filePath) => {
+    if (filePath === disappearingLog) {
+      fs.rmSync(disappearingLog, { force: true });
+      const error = new Error("ENOENT: no such file or directory");
+      error.code = "ENOENT";
+      throw error;
+    }
+    return originalStat(filePath);
+  };
+
+  let scannedFiles;
+  try {
+    scannedFiles = await scanManagedFiles({
+      snapshotDataPath: path.join(disappearingRoot, "data"),
+      serverLogFilePath: path.join(disappearingRoot, "logs/server.log"),
+      clientLogPath: path.join(disappearingRoot, "logs/clientlogs"),
+    });
+  } finally {
+    fsPromises.stat = originalStat;
+  }
+
+  assert.deepStrictEqual(scannedFiles, []);
+  fs.rmSync(disappearingRoot, { recursive: true, force: true });
+
   console.log("disk cleaner tests passed");
 })().catch((error) => {
   console.error(error);

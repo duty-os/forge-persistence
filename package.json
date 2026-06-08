@@ -10,9 +10,10 @@
     "test:admin-auth": "npm run build && node test/admin-auth.test.js",
     "test:disk-cleaner": "npm run build && node test/disk-cleaner.test.js",
     "test:file-logger": "npm run build && node test/file-logger.test.js",
+    "test:file-path-safety": "npm run build && node test/file-path-safety.test.js",
     "test:url": "npm run build && node test/url.test.js",
     "test:deploy-config": "node test/deploy-config.test.js",
-    "test:private-deploy": "npm run test:disk-cleaner && npm run test:file-logger && npm run test:admin-auth && npm run test:url && npm run test:deploy-config"
+    "test:private-deploy": "npm run test:disk-cleaner && npm run test:file-logger && npm run test:file-path-safety && npm run test:admin-auth && npm run test:url && npm run test:deploy-config"
   },
   "keywords": [],
   "author": "",

@@ -9,6 +9,7 @@ import { RawDecoderV2 } from "./RawDecoderV2";
 import { v4 } from 'uuid'
 import { RtmTokenBuilder } from "./rtm-token/RtmTokenBuilder2"
 import { snapshotPublicUrl } from "./url";
+import { validateClientLogsPayload, validateRoomId } from "./file";
 
 export const expressObject = express();
 
@@ -62,24 +63,28 @@ expressObject.get("/:roomId/snapshots/latest.snapshot", async (req, res) => {
 
 // 记录客户端日志
 expressObject.put("/client/logs", async (req, res) => {
-    const raw = await getRawBody(req);
-    const body = JSON.parse(raw.toString());
-    const { logs: inputLogs, roomId, userId } = body;
+    try {
+        const raw = await getRawBody(req);
+        const body = JSON.parse(raw.toString());
+        const { logs: inputLogs, roomId, userId } = validateClientLogsPayload(body);
 
-    const last = inputLogs[inputLogs.length - 1];
-    const offset = Date.now() - last.timestamp;
-    const logs = inputLogs.map((log: any) => {
-        const completeLog = { ...log, roomId, userId };
-        return {
-            time: Math.floor((log.timestamp + offset) / 1000),
-            contents: Object.keys(completeLog).map(key => {
-                return { key, value: `${completeLog[key]}` };
-            })
-        };
-    });
-    clientLogger.putLogs(roomId, logs);
-    diskCleaner.requestRun("client-log-write");
-    res.status(201).end();
+        const last = inputLogs[inputLogs.length - 1];
+        const offset = Date.now() - last.timestamp;
+        const logs = inputLogs.map((log: any) => {
+            const completeLog = { ...log, roomId, userId };
+            return {
+                time: Math.floor((log.timestamp + offset) / 1000),
+                contents: Object.keys(completeLog).map(key => {
+                    return { key, value: `${completeLog[key]}` };
+                })
+            };
+        });
+        clientLogger.putLogs(roomId, logs);
+        diskCleaner.requestRun("client-log-write");
+        res.status(201).end();
+    } catch (e: any) {
+        res.status(400).send({ status: "fail", message: e.message });
+    }
 });
 
 // 保存客户端上传的房间快照
@@ -90,6 +95,7 @@ expressObject.put("/snapshot", async (req, res) => {
         const decoder = new RawDecoder();
         const buf = decoder.decodeSnapshot(body);
         const { roomId } = decoder;
+        validateRoomId(roomId);
 
         if (buf.length > 0) {
             const now = Date.now();
