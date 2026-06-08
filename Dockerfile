@@ -1,6 +1,6 @@
 FROM node:20-slim
 
-RUN apt update && apt install net-tools && apt install curl -y && npm install -g ts-node
+RUN apt update && apt install net-tools curl -y
 
 WORKDIR /app
 
@@ -13,4 +13,6 @@ RUN yarn install --frozen-lockfile
 
 COPY ./ ./
 
-ENTRYPOINT ["ts-node", "./src/index.ts"]
+RUN yarn build
+
+ENTRYPOINT ["node", "./lib/index.js"]

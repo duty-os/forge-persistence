@@ -1,0 +1,19 @@
+services:
+  forge-persistence:
+    image: "registry.netless.link/app/forge-persistence-private:latest"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./config:/app/config
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 500M
+    ports:
+      - "3000:3000"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"

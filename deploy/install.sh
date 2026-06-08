@@ -1,12 +1,7 @@
 #!/bin/bash
-set -ex;
+set -euo pipefail
 
-export VERSION=1.0.3
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
 
-sudo docker load -i forge-persistence-private-${VERSION}.tar
-
-mkdir -p config
-mkdir -p logs
-mkdir -p data
-
-cp config.json.example config/app.json
+exec ./setup.sh "$@"

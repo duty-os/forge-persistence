@@ -1,5 +1,6 @@
 import { constants, createWriteStream, mkdirSync, writeFile } from "fs";
-import { access, mkdir, readFile } from "fs/promises";
+import { access, mkdir, readFile, rm } from "fs/promises";
+import path from "path";
 import { Logger } from "./log";
 
 export class LocalClientLoggerHandler {
@@ -35,9 +36,31 @@ export class LocalClientLoggerHandler {
         timestamp: curr,
         stream: createWriteStream(this.path + `/${roomId}.log`, { flags: 'a+' })
       };
+      this.streams.set(roomId, stream);
     }
     stream.timestamp = curr;
     stream.stream.write(JSON.stringify(logs) + '\r\n');
+  }
+
+  public getLogRoot(): string {
+    return this.path;
+  }
+
+  public getActiveLogRelativePaths(): Set<string> {
+    return new Set(
+      Array.from(this.streams.keys()).map((roomId) => `logs/clientlogs/${roomId}.log`)
+    );
+  }
+
+  public async deleteClientLogSafely(filePath: string): Promise<void> {
+    const roomId = path.basename(filePath, ".log");
+    const stream = this.streams.get(roomId);
+    if (stream) {
+      stream.stream.end();
+      stream.stream.close();
+      this.streams.delete(roomId);
+    }
+    await rm(filePath, { force: true });
   }
 
 }
@@ -70,6 +93,10 @@ export class LocalSnapshotHandler {
     await mkdir(`${this.path}/${roomId}`, { recursive: true });
     await this.write(`${this.path}/${roomId}/latest.snapshot`, snapshot);
     await this.write(`${this.path}/${roomId}/${new Date().getTime()}.snapshot`, snapshot);
+  }
+
+  public getSnapshotRoot(): string {
+    return this.path;
   }
 
   public async getLatestSnapshot(roomId: string): Promise<Buffer<ArrayBuffer> | null> {

@@ -2,11 +2,13 @@ import express from "express";
 import getRawBody from "raw-body";
 import cors from "cors";
 
-import { clientLogger, config, logger, snapshotHandler } from "./init";
+import { clientLogger, config, diskCleaner, logger, snapshotHandler } from "./init";
+import { requireAdminAccess } from "./admin-auth";
 import {RawDecoder} from "./RawDecoder";
 import { RawDecoderV2 } from "./RawDecoderV2";
 import { v4 } from 'uuid'
 import { RtmTokenBuilder } from "./rtm-token/RtmTokenBuilder2"
+import { snapshotPublicUrl } from "./url";
 
 export const expressObject = express();
 
@@ -27,14 +29,12 @@ expressObject.use((req, res, next) => {
 
 // 返回房间快照地址
 expressObject.get("/snapshot/:roomId", async (req, res) => {
-    const url = new URL(`${config.snapshotHost}/${req.params.roomId}/snapshots/latest.snapshot`);
-    res.send({ url: url.toString() });
+    res.send({ url: snapshotPublicUrl(req, config, req.params.roomId) });
 });
 
 expressObject.get("/v2/snapshot/:roomId", async (req, res) => {
-    const url = new URL(`${config.snapshotHost}/${req.params.roomId}/snapshots/latest.snapshot`);
     res.send({
-        url: url.toString(),
+        url: snapshotPublicUrl(req, config, req.params.roomId),
         now: Date.now(),
     });
 });
@@ -78,6 +78,7 @@ expressObject.put("/client/logs", async (req, res) => {
         };
     });
     clientLogger.putLogs(roomId, logs);
+    diskCleaner.requestRun("client-log-write");
     res.status(201).end();
 });
 
@@ -97,7 +98,8 @@ expressObject.put("/snapshot", async (req, res) => {
             // todo 自行决定保存位置
             logger.info("房间 uuid: " + roomId);
             // console.log("快照: ", uploadBuffer);
-            snapshotHandler.putSnapshot(roomId, uploadBuffer);
+            await snapshotHandler.putSnapshot(roomId, uploadBuffer);
+            diskCleaner.requestRun("snapshot-write");
         }
         res.status(200).send({ status: "ok" });
     } catch (e) {
@@ -139,6 +141,25 @@ expressObject.post("/v5/rooms", async (req, res) => {
         res.status(500).send({ status: "fail", message: e.message });
     }
 })
+
+const requireAdminToken = requireAdminAccess(config.adminToken);
+
+expressObject.get("/admin/disk/cleanup/status", requireAdminToken, async (req, res) => {
+    res.status(200).send({
+        status: "ok",
+        cleanup: diskCleaner.getStatus(),
+    });
+});
+
+expressObject.post("/admin/disk/cleanup", requireAdminToken, async (req, res) => {
+    try {
+        const result = await diskCleaner.run("manual");
+        res.status(200).send({ status: "ok", result });
+    } catch (e: any) {
+        logger.error("manual disk cleanup failed", e as Error);
+        res.status(500).send({ status: "fail", message: e.message });
+    }
+});
 
 expressObject.get("/v5/rooms/:roomId", async (req, res) => {
     try {
@@ -192,6 +213,7 @@ expressObject.post("/v5/tokens/rooms/:roomId", async (req, res) => {
 
 
 expressObject.listen(3000, () => {
+    diskCleaner.start();
     logger.info(`app listening at http://0.0.0.0:3000`);
 });
 
