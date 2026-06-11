@@ -70,11 +70,7 @@ export class FileLogger implements LoggerHandler, Logger {
         renameSync(this.path, rotatedPath);
         rotated = true;
       } catch {
-        try {
-          this.currentBytes = existsSync(this.path) ? statSync(this.path).size : 0;
-        } catch {
-          this.currentBytes = 0;
-        }
+        this.currentBytes = 0;
       }
     } else {
       this.currentBytes = 0;

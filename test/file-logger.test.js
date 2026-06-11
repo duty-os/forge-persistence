@@ -38,6 +38,9 @@ async function waitForFlush() {
     assert.doesNotThrow(() => {
       renameLogger.info("rotation fallback", { payload: "z".repeat(80) });
     });
+    assert.doesNotThrow(() => {
+      renameLogger.info("rotation fallback second line", { payload: "w".repeat(80) });
+    });
     await waitForFlush();
     renameLogger.close();
     assert(fs.existsSync(renameLogPath));
