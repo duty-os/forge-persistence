@@ -433,7 +433,7 @@ export class DiskCleaner {
         if (this.lastRunAt && now - this.lastRunAt < minIntervalMs) {
             return;
         }
-        void this.run(reason);
+        void this.run(reason).catch(() => undefined);
     }
 
     async run(reason: string): Promise<CleanupResult> {

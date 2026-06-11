@@ -5,6 +5,7 @@ const os = require("os");
 const path = require("path");
 const {
   DEFAULT_DISK_RETENTION_POLICY,
+  DiskCleaner,
   classifyManagedFile,
   scanManagedFiles,
   planDiskCleanup,
@@ -180,6 +181,38 @@ assert.deepStrictEqual(classifyManagedFile("logs/clientlogs/room-a.log"), {
   assert.strictEqual(result.overLimit, false);
 }
 
+{
+  const logger = {
+    info() {},
+    error() {},
+  };
+  let processUnhandled = false;
+  const onUnhandled = () => {
+    processUnhandled = true;
+  };
+  process.once("unhandledRejection", onUnhandled);
+
+  const cleaner = new DiskCleaner({
+    paths: {
+      snapshotDataPath: "/tmp/does-not-matter",
+      serverLogFilePath: "/tmp/does-not-matter/server.log",
+      clientLogPath: "/tmp/does-not-matter/clientlogs",
+    },
+    policy: DEFAULT_DISK_RETENTION_POLICY,
+    logger,
+  });
+
+  cleaner.run = async () => {
+    throw new Error("background-cleanup-failed");
+  };
+  cleaner.requestRun("test");
+
+  setTimeout(() => {
+    process.removeListener("unhandledRejection", onUnhandled);
+    assert.strictEqual(processUnhandled, false);
+  }, 20);
+}
+
 function writeFile(root, relativePath, content, ageDays) {
   const filePath = path.join(root, relativePath);
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -249,6 +282,8 @@ function writeFile(root, relativePath, content, ageDays) {
 
   assert.deepStrictEqual(scannedFiles, []);
   fs.rmSync(disappearingRoot, { recursive: true, force: true });
+
+  await new Promise((resolve) => setTimeout(resolve, 40));
 
   console.log("disk cleaner tests passed");
 })().catch((error) => {

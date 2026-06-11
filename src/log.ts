@@ -57,13 +57,21 @@ export class FileLogger implements LoggerHandler, Logger {
     }
     this.stream.end();
     this.stream.close();
+    let rotated = false;
     if (existsSync(this.path)) {
       const parsed = path.parse(this.path);
       const rotatedPath = path.join(parsed.dir, `${parsed.name}.${Date.now()}${parsed.ext}`);
-      renameSync(this.path, rotatedPath);
+      try {
+        renameSync(this.path, rotatedPath);
+        rotated = true;
+      } catch {
+        this.currentBytes = existsSync(this.path) ? statSync(this.path).size : this.currentBytes;
+      }
     }
     this.stream = createWriteStream(this.path, { flags: "a+" });
-    this.currentBytes = 0;
+    if (rotated) {
+      this.currentBytes = 0;
+    }
   }
 
   public close() {

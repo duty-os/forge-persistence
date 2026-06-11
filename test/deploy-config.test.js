@@ -20,7 +20,9 @@ assert(config.adminToken.length >= 32);
 
 const nginxConf = read("deploy/nginx.conf");
 assert(nginxConf.includes("listen 80"));
-assert(nginxConf.includes("proxy_pass http://forge-persistence:3000"));
+assert(nginxConf.includes("upstream forge_persistence_upstream"));
+assert(nginxConf.includes("proxy_pass http://forge_persistence_upstream;"));
+assert(!nginxConf.includes("proxy_pass http://forge-persistence:3000"));
 assert(!nginxConf.includes("location /admin/"));
 assert(!nginxConf.includes("return 404"));
 

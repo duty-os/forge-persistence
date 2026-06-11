@@ -1,5 +1,6 @@
 import { readFileSync } from "fs";
 import { rm } from "fs/promises";
+import path from "path";
 import { LocalClientLoggerHandler, LocalSnapshotHandler } from "./file";
 import { FileLogger } from "./log";
 import {
@@ -37,6 +38,9 @@ if (config.serviceType !== "localFile") {
 }
 if (!config.localFile?.snapshotDataPath || !config.localFile?.logFilePath || !config.localFile?.clientlogPath) {
     throw new Error("localFile.snapshotDataPath, localFile.logFilePath and localFile.clientlogPath are required");
+}
+if (path.basename(config.localFile.logFilePath) !== "server.log") {
+    throw new Error("localFile.logFilePath must end with server.log");
 }
 
 export const diskRetentionPolicy = {
