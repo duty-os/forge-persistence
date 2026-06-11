@@ -181,6 +181,27 @@ assert.deepStrictEqual(classifyManagedFile("logs/clientlogs/room-a.log"), {
   assert.strictEqual(result.overLimit, false);
 }
 
+{
+  const result = planDiskCleanup({
+    files: [
+      item("data/room-a/old.snapshot", 20, 500),
+      item("logs/clientlogs/room-a.log", 20, 500),
+    ],
+    policy: {
+      ...DEFAULT_DISK_RETENTION_POLICY,
+      maxSnapshotHistoryAgeDays: 7,
+      minFreeGB: 0.0000006,
+    },
+    nowMs: now,
+    freeBytes: 0,
+  });
+
+  assert.deepStrictEqual(result.deleteFiles.map((file) => file.relativePath), [
+    "data/room-a/old.snapshot",
+    "logs/clientlogs/room-a.log",
+  ]);
+}
+
 function writeFile(root, relativePath, content, ageDays) {
   const filePath = path.join(root, relativePath);
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -415,8 +436,34 @@ function writeFile(root, relativePath, content, ageDays) {
 
   const mountCheckLog = loggerMessages.find((entry) => entry.message === "disk cleanup finished");
   assert(mountCheckLog);
-  assert.strictEqual(mountCheckLog.ctx.freeBytes, 1024);
+  assert.deepStrictEqual(mountCheckLog.ctx.freeBytes, {
+    snapshot: 1024000,
+    log: 1024,
+    split: true,
+  });
   fs.rmSync(multiMountRoot, { recursive: true, force: true });
+
+  const splitMountPlan = planDiskCleanup({
+    files: [
+      item("data/room-a/old.snapshot", 20, 500),
+      item("logs/clientlogs/room-a.log", 20, 500),
+    ],
+    policy: {
+      ...DEFAULT_DISK_RETENTION_POLICY,
+      maxSnapshotHistoryAgeDays: 7,
+      maxLogAgeDays: 999,
+      minFreeGB: 0.0000006,
+    },
+    nowMs: now,
+    freeBytes: {
+      snapshot: 0,
+      log: 1000,
+      split: true,
+    },
+  });
+  assert.deepStrictEqual(splitMountPlan.deleteFiles.map((file) => file.relativePath), [
+    "data/room-a/old.snapshot",
+  ]);
 
   await new Promise((resolve) => setTimeout(resolve, 40));
 

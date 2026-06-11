@@ -39,7 +39,11 @@ export class FileLogger implements LoggerHandler, Logger {
     this.globalContext = {
       hostname: hostname(),
     };
-    this.currentBytes = existsSync(this.path) ? statSync(this.path).size : 0;
+    try {
+      this.currentBytes = existsSync(this.path) ? statSync(this.path).size : 0;
+    } catch {
+      this.currentBytes = 0;
+    }
     this.stream = createWriteStream(this.path, { flags: 'a+' });
   }
 
@@ -66,7 +70,11 @@ export class FileLogger implements LoggerHandler, Logger {
         renameSync(this.path, rotatedPath);
         rotated = true;
       } catch {
-        this.currentBytes = existsSync(this.path) ? statSync(this.path).size : this.currentBytes;
+        try {
+          this.currentBytes = existsSync(this.path) ? statSync(this.path).size : this.currentBytes;
+        } catch {
+          this.currentBytes = 0;
+        }
       }
     } else {
       this.currentBytes = 0;

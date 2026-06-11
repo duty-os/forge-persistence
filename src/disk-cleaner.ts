@@ -39,6 +39,10 @@ export interface ManagedFileInfo {
     protected: boolean;
 }
 
+function mountKey(relativePath: string): "snapshot" | "log" {
+    return relativePath.startsWith("data/") ? "snapshot" : "log";
+}
+
 export interface CleanupResult {
     deleteFiles: ManagedFileInfo[];
     deletedCount: number;
@@ -46,6 +50,12 @@ export interface CleanupResult {
     overLimit: boolean;
     errors: Array<{ path: string; message: string }>;
 }
+
+type MountFreeBytes = {
+    snapshot: number;
+    log: number;
+    split: boolean;
+};
 
 export interface DiskCleanerStatus {
     running: boolean;
@@ -230,7 +240,7 @@ export function planDiskCleanup(input: {
     files: ManagedFileInfo[];
     policy: DiskRetentionPolicy;
     nowMs?: number;
-    freeBytes?: number;
+    freeBytes?: number | MountFreeBytes;
     activeRelativePaths?: Set<string>;
 }): CleanupResult {
     const nowMs = input.nowMs ?? Date.now();
@@ -246,13 +256,38 @@ export function planDiskCleanup(input: {
 
     let snapshotSize = totalSize(allFiles, ["history-snapshot", "latest-snapshot"]);
     let logSize = totalSize(allFiles, ["active-server-log", "rotated-server-log", "client-log"]);
-    let projectedFreeBytes = input.freeBytes ?? gbToBytes(input.policy.minFreeGB);
+    const initialFree = typeof input.freeBytes === "number" || input.freeBytes === undefined
+        ? {
+            snapshot: input.freeBytes ?? gbToBytes(input.policy.minFreeGB),
+            log: input.freeBytes ?? gbToBytes(input.policy.minFreeGB),
+            split: false,
+        }
+        : input.freeBytes;
+    const freeByMount: Record<"snapshot" | "log", number> = {
+        snapshot: initialFree.snapshot,
+        log: initialFree.log,
+    };
+
+    const effectiveFreeBytes = (): number => {
+        if (!initialFree.split) {
+            return Math.max(freeByMount.snapshot, freeByMount.log);
+        }
+        return Math.min(freeByMount.snapshot, freeByMount.log);
+    };
+
+    const limitingMount = (): "snapshot" | "log" => {
+        return freeByMount.snapshot <= freeByMount.log ? "snapshot" : "log";
+    };
 
     const markDelete = (file: ManagedFileInfo): void => {
         if (!addDeleteCandidate(deleteFiles, deleted, file)) {
             return;
         }
-        projectedFreeBytes += file.size;
+        if (file.relativePath.startsWith("data/")) {
+            freeByMount.snapshot += file.size;
+        } else {
+            freeByMount.log += file.size;
+        }
         if (file.kind === "history-snapshot" || file.kind === "latest-snapshot") {
             snapshotSize -= file.size;
         }
@@ -306,8 +341,11 @@ export function planDiskCleanup(input: {
             .sort(oldestFirst),
     ];
     for (const file of emergencyCandidates) {
-        if (projectedFreeBytes >= minFreeBytes) {
+        if (effectiveFreeBytes() >= minFreeBytes) {
             break;
+        }
+        if (initialFree.split && mountKey(file.relativePath) !== limitingMount()) {
+            continue;
         }
         markDelete(file);
     }
@@ -324,7 +362,7 @@ export function planDiskCleanup(input: {
     const overLimit =
         remainingSnapshotSize > maxSnapshotBytes ||
         remainingLogSize > maxLogBytes ||
-        projectedFreeBytes < minFreeBytes;
+        effectiveFreeBytes() < minFreeBytes;
 
     return {
         deleteFiles,
@@ -339,7 +377,7 @@ export async function cleanupDisk(input: {
     paths: ManagedPaths;
     policy: DiskRetentionPolicy;
     nowMs?: number;
-    freeBytes?: number;
+    freeBytes?: number | MountFreeBytes;
     activeRelativePaths?: Set<string>;
     deleteFile?: (file: ManagedFileInfo) => Promise<void>;
 }): Promise<CleanupResult> {
@@ -426,7 +464,7 @@ export class DiskCleaner {
         this.timer.unref?.();
     }
 
-    private async minFreeBytes(): Promise<number> {
+    private async minFreeBytes(): Promise<MountFreeBytes> {
         const targets = [
             this.paths.snapshotDataPath,
             this.paths.serverLogFilePath,
@@ -447,9 +485,22 @@ export class DiskCleaner {
         );
         const existing = freeBytes.filter((value): value is number => typeof value === "number");
         if (existing.length === 0) {
-            return gbToBytes(this.policy.minFreeGB);
+            const fallback = gbToBytes(this.policy.minFreeGB);
+            return {
+                snapshot: fallback,
+                log: fallback,
+                split: false,
+            };
         }
-        return Math.min(...existing);
+        const [snapshotFree, serverLogFree, clientLogFree] = freeBytes;
+        const logFreeCandidates = [serverLogFree, clientLogFree].filter((value): value is number => typeof value === "number");
+        const logFree = logFreeCandidates.length > 0 ? Math.min(...logFreeCandidates) : (snapshotFree ?? Math.min(...existing));
+        const snapshotValue = snapshotFree ?? logFree;
+        return {
+            snapshot: snapshotValue,
+            log: logFree,
+            split: snapshotValue !== logFree,
+        };
     }
 
     requestRun(reason: string): void {

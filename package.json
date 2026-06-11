@@ -10,13 +10,14 @@
     "test:admin-auth": "npm run build && node test/admin-auth.test.js",
     "test:disk-cleaner": "npm run build && node test/disk-cleaner.test.js",
     "test:file-logger": "npm run build && node test/file-logger.test.js",
+    "test:file-logger-race": "npm run build && node test/file-logger-race.test.js",
     "test:file-path-safety": "npm run build && node test/file-path-safety.test.js",
     "test:init-config": "node test/init-config.test.js",
     "test:index-client-log-error": "node test/index-client-log-error.test.js",
     "test:index-snapshot-error": "node test/index-snapshot-error.test.js",
     "test:url": "npm run build && node test/url.test.js",
     "test:deploy-config": "node test/deploy-config.test.js",
-    "test:private-deploy": "npm run test:disk-cleaner && npm run test:file-logger && npm run test:file-path-safety && npm run test:init-config && npm run test:index-client-log-error && npm run test:index-snapshot-error && npm run test:admin-auth && npm run test:url && npm run test:deploy-config"
+    "test:private-deploy": "npm run test:disk-cleaner && npm run test:file-logger && npm run test:file-logger-race && npm run test:file-path-safety && npm run test:init-config && npm run test:index-client-log-error && npm run test:index-snapshot-error && npm run test:admin-auth && npm run test:url && npm run test:deploy-config"
   },
   "keywords": [],
   "author": "",

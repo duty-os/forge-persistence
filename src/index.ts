@@ -122,6 +122,10 @@ expressObject.put("/snapshot", async (req, res) => {
         }
         res.status(200).send({ status: "ok" });
     } catch (e: any) {
+        if (e instanceof Error && e.message === "invalid roomId") {
+            res.status(400).send({ status: "fail", message: e.message });
+            return;
+        }
         logger.error("snapshot upload failed", e as Error);
         res.status(500).send({ status: "fail", message: e.message });
     }
