@@ -150,7 +150,12 @@ async function scanSnapshotFiles(snapshotDataPath: string): Promise<ManagedFileI
             continue;
         }
         const roomPath = path.join(snapshotDataPath, roomEntry.name);
-        const snapshotEntries = await readdir(roomPath, { withFileTypes: true });
+        const snapshotEntries = await readdir(roomPath, { withFileTypes: true }).catch((e: any) => {
+            if (e?.code === "ENOENT") {
+                return [];
+            }
+            throw e;
+        });
         for (const snapshotEntry of snapshotEntries) {
             if (!snapshotEntry.isFile()) {
                 continue;
@@ -175,7 +180,12 @@ async function scanLogFiles(serverLogFilePath: string, clientLogPath: string): P
         }
     }
     if (existsSync(serverDir)) {
-        const entries = await readdir(serverDir, { withFileTypes: true });
+        const entries = await readdir(serverDir, { withFileTypes: true }).catch((e: any) => {
+            if (e?.code === "ENOENT") {
+                return [];
+            }
+            throw e;
+        });
         for (const entry of entries) {
             if (!entry.isFile() || !/^server\.[^/]+\.log$/.test(entry.name)) {
                 continue;
@@ -187,7 +197,12 @@ async function scanLogFiles(serverLogFilePath: string, clientLogPath: string): P
         }
     }
     if (existsSync(clientLogPath)) {
-        const entries = await readdir(clientLogPath, { withFileTypes: true });
+        const entries = await readdir(clientLogPath, { withFileTypes: true }).catch((e: any) => {
+            if (e?.code === "ENOENT") {
+                return [];
+            }
+            throw e;
+        });
         for (const entry of entries) {
             if (!entry.isFile() || !entry.name.endsWith(".log")) {
                 continue;

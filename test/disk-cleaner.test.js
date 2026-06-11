@@ -391,6 +391,79 @@ function writeFile(root, relativePath, content, ageDays) {
   assert.deepStrictEqual(scannedFiles, []);
   fs.rmSync(disappearingRoot, { recursive: true, force: true });
 
+  const disappearingSnapshotRoot = fs.mkdtempSync(path.join(os.tmpdir(), "disk-cleaner-snapshot-race-"));
+  const roomRoot = path.join(disappearingSnapshotRoot, "data/room-z");
+  writeFile(disappearingSnapshotRoot, "data/room-z/old.snapshot", "old", 1);
+  const originalReaddir = fsPromises.readdir;
+  fsPromises.readdir = async (targetPath, options) => {
+    if (targetPath === roomRoot) {
+      fs.rmSync(roomRoot, { recursive: true, force: true });
+      const error = new Error("ENOENT: no such file or directory");
+      error.code = "ENOENT";
+      throw error;
+    }
+    return originalReaddir(targetPath, options);
+  };
+  try {
+    const racedSnapshotFiles = await scanManagedFiles({
+      snapshotDataPath: path.join(disappearingSnapshotRoot, "data"),
+      serverLogFilePath: path.join(disappearingSnapshotRoot, "logs/server.log"),
+      clientLogPath: path.join(disappearingSnapshotRoot, "logs/clientlogs"),
+    });
+    assert.deepStrictEqual(racedSnapshotFiles, []);
+  } finally {
+    fsPromises.readdir = originalReaddir;
+  }
+  fs.rmSync(disappearingSnapshotRoot, { recursive: true, force: true });
+
+  const disappearingServerDirRoot = fs.mkdtempSync(path.join(os.tmpdir(), "disk-cleaner-serverdir-race-"));
+  const serverDir = path.join(disappearingServerDirRoot, "logs");
+  writeFile(disappearingServerDirRoot, "logs/server.1710000000000.log", "rotated", 1);
+  fsPromises.readdir = async (targetPath, options) => {
+    if (targetPath === serverDir) {
+      fs.rmSync(serverDir, { recursive: true, force: true });
+      const error = new Error("ENOENT: no such file or directory");
+      error.code = "ENOENT";
+      throw error;
+    }
+    return originalReaddir(targetPath, options);
+  };
+  try {
+    const racedServerLogFiles = await scanManagedFiles({
+      snapshotDataPath: path.join(disappearingServerDirRoot, "data"),
+      serverLogFilePath: path.join(disappearingServerDirRoot, "logs/server.log"),
+      clientLogPath: path.join(disappearingServerDirRoot, "logs/clientlogs"),
+    });
+    assert.deepStrictEqual(racedServerLogFiles, []);
+  } finally {
+    fsPromises.readdir = originalReaddir;
+  }
+  fs.rmSync(disappearingServerDirRoot, { recursive: true, force: true });
+
+  const disappearingClientDirRoot = fs.mkdtempSync(path.join(os.tmpdir(), "disk-cleaner-clientdir-race-"));
+  const clientDir = path.join(disappearingClientDirRoot, "logs/clientlogs");
+  writeFile(disappearingClientDirRoot, "logs/clientlogs/room-a.log", "client", 1);
+  fsPromises.readdir = async (targetPath, options) => {
+    if (targetPath === clientDir) {
+      fs.rmSync(clientDir, { recursive: true, force: true });
+      const error = new Error("ENOENT: no such file or directory");
+      error.code = "ENOENT";
+      throw error;
+    }
+    return originalReaddir(targetPath, options);
+  };
+  try {
+    const racedClientLogFiles = await scanManagedFiles({
+      snapshotDataPath: path.join(disappearingClientDirRoot, "data"),
+      serverLogFilePath: path.join(disappearingClientDirRoot, "logs/server.log"),
+      clientLogPath: path.join(disappearingClientDirRoot, "logs/clientlogs"),
+    });
+    assert.deepStrictEqual(racedClientLogFiles, []);
+  } finally {
+    fsPromises.readdir = originalReaddir;
+  }
+  fs.rmSync(disappearingClientDirRoot, { recursive: true, force: true });
+
   const multiMountRoot = fs.mkdtempSync(path.join(os.tmpdir(), "disk-cleaner-mounts-"));
   fs.mkdirSync(path.join(multiMountRoot, "snapshots"), { recursive: true });
   fs.mkdirSync(path.join(multiMountRoot, "logs/clientlogs"), { recursive: true });
