@@ -47,6 +47,20 @@ async function waitForFlush() {
     fs.rmSync(renameRoot, { recursive: true, force: true });
   }
 
+  const missingRoot = fs.mkdtempSync(path.join(os.tmpdir(), "file-logger-missing-"));
+  const missingLogPath = path.join(missingRoot, "server.log");
+  fs.writeFileSync(missingLogPath, "seed");
+  const missingLogger = new FileLogger(missingLogPath, { maxBytes: 1 });
+  fs.rmSync(missingLogPath, { force: true });
+  assert.doesNotThrow(() => {
+    missingLogger.info("recreate-after-missing", { payload: "q".repeat(80) });
+  });
+  await waitForFlush();
+  missingLogger.close();
+  assert(fs.existsSync(missingLogPath));
+  assert(fs.readFileSync(missingLogPath, "utf8").includes("recreate-after-missing"));
+  fs.rmSync(missingRoot, { recursive: true, force: true });
+
   fs.rmSync(root, { recursive: true, force: true });
   console.log("file logger tests passed");
 })().catch((error) => {

@@ -1,5 +1,5 @@
 import { existsSync } from "fs";
-import { readdir, rm, stat, statfs } from "fs/promises";
+import { readdir, rm, rmdir, stat, statfs } from "fs/promises";
 import path from "path";
 import type { Logger } from "./log";
 
@@ -362,7 +362,7 @@ export async function cleanupDisk(input: {
             deletedCount += 1;
             deletedBytes += file.size;
             if (file.kind === "history-snapshot" || file.kind === "latest-snapshot") {
-                await rm(path.dirname(file.path), { recursive: false, force: true }).catch(() => undefined);
+                await rmdir(path.dirname(file.path)).catch(() => undefined);
             }
         } catch (e: any) {
             errors.push({ path: file.path, message: e.message });
@@ -424,6 +424,32 @@ export class DiskCleaner {
         this.timer.unref?.();
     }
 
+    private async minFreeBytes(): Promise<number> {
+        const targets = [
+            this.paths.snapshotDataPath,
+            this.paths.serverLogFilePath,
+            this.paths.clientLogPath,
+        ];
+        const freeBytes = await Promise.all(
+            targets.map(async (targetPath) => {
+                try {
+                    const fsStat = await statfs(targetPath);
+                    return fsStat.bavail * fsStat.bsize;
+                } catch (e: any) {
+                    if (e?.code === "ENOENT") {
+                        return undefined;
+                    }
+                    throw e;
+                }
+            })
+        );
+        const existing = freeBytes.filter((value): value is number => typeof value === "number");
+        if (existing.length === 0) {
+            return gbToBytes(this.policy.minFreeGB);
+        }
+        return Math.min(...existing);
+    }
+
     requestRun(reason: string): void {
         if (!this.policy.enabled || this.running) {
             return;
@@ -450,8 +476,7 @@ export class DiskCleaner {
         this.running = true;
         this.lastReason = reason;
         try {
-            const fsStat = await statfs(this.paths.snapshotDataPath);
-            const freeBytes = fsStat.bavail * fsStat.bsize;
+            const freeBytes = await this.minFreeBytes();
             const result = await cleanupDisk({
                 paths: this.paths,
                 policy: this.policy,

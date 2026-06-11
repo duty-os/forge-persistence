@@ -46,9 +46,10 @@ export class FileLogger implements LoggerHandler, Logger {
   handler(jsonedLog: string) {
     console.log(jsonedLog);
     const line = jsonedLog + "\r\n";
-    this.rotateIfNeeded(Buffer.byteLength(line));
+    const lineBytes = Buffer.byteLength(line);
+    this.rotateIfNeeded(lineBytes);
     this.stream.write(line);
-    this.currentBytes += Buffer.byteLength(line);
+    this.currentBytes += lineBytes;
   }
 
   private rotateIfNeeded(nextBytes: number) {
@@ -67,6 +68,8 @@ export class FileLogger implements LoggerHandler, Logger {
       } catch {
         this.currentBytes = existsSync(this.path) ? statSync(this.path).size : this.currentBytes;
       }
+    } else {
+      this.currentBytes = 0;
     }
     this.stream = createWriteStream(this.path, { flags: "a+" });
     if (rotated) {

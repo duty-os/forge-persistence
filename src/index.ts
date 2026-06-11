@@ -108,8 +108,9 @@ expressObject.put("/snapshot", async (req, res) => {
             diskCleaner.requestRun("snapshot-write");
         }
         res.status(200).send({ status: "ok" });
-    } catch (e) {
-        res.status(500).send({ status: "fail" });
+    } catch (e: any) {
+        logger.error("snapshot upload failed", e as Error);
+        res.status(500).send({ status: "fail", message: e.message });
     }
 });
 

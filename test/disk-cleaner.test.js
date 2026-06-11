@@ -253,8 +253,32 @@ function writeFile(root, relativePath, content, ageDays) {
   assert.strictEqual(fs.existsSync(path.join(root, "data/room-a/old.snapshot")), false);
   assert.strictEqual(fs.existsSync(path.join(root, "logs/server.1710000000000.log")), false);
   assert.strictEqual(fs.existsSync(path.join(root, "logs/clientlogs/room-a.log")), false);
+  assert.strictEqual(fs.existsSync(path.join(root, "data/room-a")), true);
 
   fs.rmSync(root, { recursive: true, force: true });
+
+  const emptyRoomRoot = fs.mkdtempSync(path.join(os.tmpdir(), "disk-cleaner-empty-room-"));
+  writeFile(emptyRoomRoot, "data/room-b/old.snapshot", "old", 20);
+
+  const cleanupEmptyRoom = await cleanupDisk({
+    paths: {
+      snapshotDataPath: path.join(emptyRoomRoot, "data"),
+      serverLogFilePath: path.join(emptyRoomRoot, "logs/server.log"),
+      clientLogPath: path.join(emptyRoomRoot, "logs/clientlogs"),
+    },
+    policy: {
+      ...DEFAULT_DISK_RETENTION_POLICY,
+      maxSnapshotHistoryAgeDays: 7,
+      maxSnapshotGB: 1,
+      maxLogGB: 1,
+    },
+    nowMs: now,
+    freeBytes: 1024,
+  });
+
+  assert.strictEqual(cleanupEmptyRoom.deletedCount, 1);
+  assert.strictEqual(fs.existsSync(path.join(emptyRoomRoot, "data/room-b")), false);
+  fs.rmSync(emptyRoomRoot, { recursive: true, force: true });
 
   const disappearingRoot = fs.mkdtempSync(path.join(os.tmpdir(), "disk-cleaner-disappearing-"));
   const disappearingLog = writeFile(disappearingRoot, "logs/clientlogs/disappearing.log", "client", 1);
@@ -282,6 +306,54 @@ function writeFile(root, relativePath, content, ageDays) {
 
   assert.deepStrictEqual(scannedFiles, []);
   fs.rmSync(disappearingRoot, { recursive: true, force: true });
+
+  const multiMountRoot = fs.mkdtempSync(path.join(os.tmpdir(), "disk-cleaner-mounts-"));
+  fs.mkdirSync(path.join(multiMountRoot, "snapshots"), { recursive: true });
+  fs.mkdirSync(path.join(multiMountRoot, "logs/clientlogs"), { recursive: true });
+  fs.writeFileSync(path.join(multiMountRoot, "logs/server.log"), "seed");
+
+  const originalStatfs = fsPromises.statfs;
+  fsPromises.statfs = async (targetPath) => {
+    if (targetPath === path.join(multiMountRoot, "snapshots")) {
+      return { bavail: 1000, bsize: 1024 };
+    }
+    if (
+      targetPath === path.join(multiMountRoot, "logs/server.log") ||
+      targetPath === path.join(multiMountRoot, "logs/clientlogs")
+    ) {
+      return { bavail: 1, bsize: 1024 };
+    }
+    return originalStatfs(targetPath);
+  };
+
+  const loggerMessages = [];
+  try {
+    const cleaner = new DiskCleaner({
+      paths: {
+        snapshotDataPath: path.join(multiMountRoot, "snapshots"),
+        serverLogFilePath: path.join(multiMountRoot, "logs/server.log"),
+        clientLogPath: path.join(multiMountRoot, "logs/clientlogs"),
+      },
+      policy: DEFAULT_DISK_RETENTION_POLICY,
+      logger: {
+        info(message, ctx) {
+          loggerMessages.push({ message, ctx });
+        },
+        error(message, error, ctx) {
+          loggerMessages.push({ message, error, ctx });
+        },
+      },
+      deleteFile: async () => undefined,
+    });
+    await cleaner.run("mount-check");
+  } finally {
+    fsPromises.statfs = originalStatfs;
+  }
+
+  const mountCheckLog = loggerMessages.find((entry) => entry.message === "disk cleanup finished");
+  assert(mountCheckLog);
+  assert.strictEqual(mountCheckLog.ctx.freeBytes, 1024);
+  fs.rmSync(multiMountRoot, { recursive: true, force: true });
 
   await new Promise((resolve) => setTimeout(resolve, 40));
 
