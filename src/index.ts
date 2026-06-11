@@ -37,15 +37,25 @@ expressObject.use((req, res, next) => {
 });
 
 // 返回房间快照地址
-expressObject.get("/snapshot/:roomId", async (req, res) => {
-    res.send({ url: snapshotPublicUrl(req, config, req.params.roomId) });
+expressObject.get("/snapshot/:roomId", (req, res) => {
+    try {
+        validateRoomId(req.params.roomId);
+        res.send({ url: snapshotPublicUrl(req, config, req.params.roomId) });
+    } catch (e: any) {
+        res.status(400).send({ status: "fail", message: e.message });
+    }
 });
 
-expressObject.get("/v2/snapshot/:roomId", async (req, res) => {
-    res.send({
-        url: snapshotPublicUrl(req, config, req.params.roomId),
-        now: Date.now(),
-    });
+expressObject.get("/v2/snapshot/:roomId", (req, res) => {
+    try {
+        validateRoomId(req.params.roomId);
+        res.send({
+            url: snapshotPublicUrl(req, config, req.params.roomId),
+            now: Date.now(),
+        });
+    } catch (e: any) {
+        res.status(400).send({ status: "fail", message: e.message });
+    }
 });
 
 expressObject.get("/:roomId/snapshots/latest.snapshot", async (req, res) => {

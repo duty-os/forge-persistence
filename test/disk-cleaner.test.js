@@ -465,6 +465,11 @@ function writeFile(root, relativePath, content, ageDays) {
     "data/room-a/old.snapshot",
   ]);
 
+  const directoryRemovalSource = fs.readFileSync(path.join(__dirname, "..", "src/disk-cleaner.ts"), "utf8");
+  assert(directoryRemovalSource.includes("const remainingEntries = await readdir(roomPath).catch(() => [])"));
+  assert(directoryRemovalSource.includes("if (remainingEntries.length === 0)"));
+  assert(directoryRemovalSource.includes("await rm(roomPath, { recursive: true, force: true }).catch(() => undefined)"));
+
   await new Promise((resolve) => setTimeout(resolve, 40));
 
   console.log("disk cleaner tests passed");

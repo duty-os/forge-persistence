@@ -1,5 +1,5 @@
 import { existsSync } from "fs";
-import { readdir, rm, rmdir, stat, statfs } from "fs/promises";
+import { readdir, rm, stat, statfs } from "fs/promises";
 import path from "path";
 import type { Logger } from "./log";
 
@@ -400,7 +400,11 @@ export async function cleanupDisk(input: {
             deletedCount += 1;
             deletedBytes += file.size;
             if (file.kind === "history-snapshot" || file.kind === "latest-snapshot") {
-                await rmdir(path.dirname(file.path)).catch(() => undefined);
+                const roomPath = path.dirname(file.path);
+                const remainingEntries = await readdir(roomPath).catch(() => []);
+                if (remainingEntries.length === 0) {
+                    await rm(roomPath, { recursive: true, force: true }).catch(() => undefined);
+                }
             }
         } catch (e: any) {
             errors.push({ path: file.path, message: e.message });
