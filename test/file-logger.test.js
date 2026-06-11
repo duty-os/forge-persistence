@@ -29,7 +29,9 @@ async function waitForFlush() {
   const renameLogPath = path.join(renameRoot, "server.log");
   fs.writeFileSync(renameLogPath, "seed");
   const originalRenameSync = fsModule.renameSync;
+  let renameAttempts = 0;
   fsModule.renameSync = () => {
+    renameAttempts += 1;
     throw new Error("rename failed");
   };
 
@@ -43,6 +45,7 @@ async function waitForFlush() {
     });
     await waitForFlush();
     renameLogger.close();
+    assert.strictEqual(renameAttempts, 1);
     assert(fs.existsSync(renameLogPath));
     assert(fs.readFileSync(renameLogPath, "utf8").includes("rotation fallback"));
   } finally {

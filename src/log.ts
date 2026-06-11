@@ -32,6 +32,7 @@ export class FileLogger implements LoggerHandler, Logger {
   private stream: import("fs").WriteStream;
   private maxBytes?: number;
   private currentBytes: number;
+  private rotationFailed = false;
 
   constructor(path: string, options?: { maxBytes?: number }) {
     this.path = path;
@@ -57,7 +58,7 @@ export class FileLogger implements LoggerHandler, Logger {
   }
 
   private rotateIfNeeded(nextBytes: number) {
-    if (!this.maxBytes || this.currentBytes + nextBytes <= this.maxBytes) {
+    if (this.rotationFailed || !this.maxBytes || this.currentBytes + nextBytes <= this.maxBytes) {
       return;
     }
     this.stream.end();
@@ -69,8 +70,14 @@ export class FileLogger implements LoggerHandler, Logger {
       try {
         renameSync(this.path, rotatedPath);
         rotated = true;
+        this.rotationFailed = false;
       } catch {
-        this.currentBytes = 0;
+        this.rotationFailed = true;
+        try {
+          this.currentBytes = existsSync(this.path) ? statSync(this.path).size : 0;
+        } catch {
+          this.currentBytes = 0;
+        }
       }
     } else {
       this.currentBytes = 0;
