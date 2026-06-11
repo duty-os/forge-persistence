@@ -143,7 +143,12 @@ async function scanSnapshotFiles(snapshotDataPath: string): Promise<ManagedFileI
     if (!existsSync(snapshotDataPath)) {
         return [];
     }
-    const roomEntries = await readdir(snapshotDataPath, { withFileTypes: true });
+    const roomEntries = await readdir(snapshotDataPath, { withFileTypes: true }).catch((e: any) => {
+        if (e?.code === "ENOENT") {
+            return [];
+        }
+        throw e;
+    });
     const files: ManagedFileInfo[] = [];
     for (const roomEntry of roomEntries) {
         if (!roomEntry.isDirectory()) {

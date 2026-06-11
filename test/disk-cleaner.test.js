@@ -416,6 +416,30 @@ function writeFile(root, relativePath, content, ageDays) {
   }
   fs.rmSync(disappearingSnapshotRoot, { recursive: true, force: true });
 
+  const disappearingSnapshotTopRoot = fs.mkdtempSync(path.join(os.tmpdir(), "disk-cleaner-snapshot-top-race-"));
+  const snapshotTop = path.join(disappearingSnapshotTopRoot, "data");
+  writeFile(disappearingSnapshotTopRoot, "data/room-top/old.snapshot", "old", 1);
+  fsPromises.readdir = async (targetPath, options) => {
+    if (targetPath === snapshotTop) {
+      fs.rmSync(snapshotTop, { recursive: true, force: true });
+      const error = new Error("ENOENT: no such file or directory");
+      error.code = "ENOENT";
+      throw error;
+    }
+    return originalReaddir(targetPath, options);
+  };
+  try {
+    const racedTopSnapshotFiles = await scanManagedFiles({
+      snapshotDataPath: snapshotTop,
+      serverLogFilePath: path.join(disappearingSnapshotTopRoot, "logs/server.log"),
+      clientLogPath: path.join(disappearingSnapshotTopRoot, "logs/clientlogs"),
+    });
+    assert.deepStrictEqual(racedTopSnapshotFiles, []);
+  } finally {
+    fsPromises.readdir = originalReaddir;
+  }
+  fs.rmSync(disappearingSnapshotTopRoot, { recursive: true, force: true });
+
   const disappearingServerDirRoot = fs.mkdtempSync(path.join(os.tmpdir(), "disk-cleaner-serverdir-race-"));
   const serverDir = path.join(disappearingServerDirRoot, "logs");
   writeFile(disappearingServerDirRoot, "logs/server.1710000000000.log", "rotated", 1);
