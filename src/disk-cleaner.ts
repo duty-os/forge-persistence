@@ -373,6 +373,7 @@ export async function cleanupDisk(input: {
         ...planned,
         deletedCount,
         deletedBytes,
+        overLimit: planned.overLimit || errors.length > 0,
         errors,
     };
 }
@@ -385,6 +386,7 @@ export class DiskCleaner {
     private deleteFile?: (file: ManagedFileInfo) => Promise<void>;
     private timer?: NodeJS.Timeout;
     private running = false;
+    private currentRun?: Promise<CleanupResult>;
     private lastRunAt?: number;
     private lastReason?: string;
     private lastResult?: CleanupResult;
@@ -463,19 +465,12 @@ export class DiskCleaner {
     }
 
     async run(reason: string): Promise<CleanupResult> {
-        if (this.running) {
-            const previous = this.lastResult ?? {
-                deleteFiles: [],
-                deletedCount: 0,
-                deletedBytes: 0,
-                overLimit: false,
-                errors: [],
-            };
-            return previous;
+        if (this.currentRun) {
+            return this.currentRun;
         }
         this.running = true;
         this.lastReason = reason;
-        try {
+        this.currentRun = (async () => {
             const freeBytes = await this.minFreeBytes();
             const result = await cleanupDisk({
                 paths: this.paths,
@@ -496,12 +491,14 @@ export class DiskCleaner {
                 errorCount: result.errors.length,
             });
             return result;
-        } catch (e: any) {
+        })().catch((e: any) => {
             this.lastError = e.message;
             this.logger.error("disk cleanup failed", e as Error, { reason });
             throw e;
-        } finally {
+        }).finally(() => {
             this.running = false;
-        }
+            this.currentRun = undefined;
+        });
+        return this.currentRun;
     }
 }

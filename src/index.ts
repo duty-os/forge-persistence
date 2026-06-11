@@ -11,6 +11,14 @@ import { RtmTokenBuilder } from "./rtm-token/RtmTokenBuilder2"
 import { snapshotPublicUrl } from "./url";
 import { validateClientLogsPayload, validateRoomId } from "./file";
 
+function isClientLogRequestError(error: unknown): boolean {
+    return error instanceof SyntaxError || (error instanceof Error && (
+        error.message === "invalid roomId" ||
+        error.message === "client logs payload must include non-empty logs" ||
+        error.message === "invalid log timestamp"
+    ));
+}
+
 export const expressObject = express();
 
 expressObject.use(cors());
@@ -83,7 +91,12 @@ expressObject.put("/client/logs", async (req, res) => {
         diskCleaner.requestRun("client-log-write");
         res.status(201).end();
     } catch (e: any) {
-        res.status(400).send({ status: "fail", message: e.message });
+        if (isClientLogRequestError(e)) {
+            res.status(400).send({ status: "fail", message: e.message });
+            return;
+        }
+        logger.error("client log upload failed", e as Error);
+        res.status(500).send({ status: "fail", message: e.message });
     }
 });
 

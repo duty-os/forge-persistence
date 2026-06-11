@@ -21,13 +21,18 @@ export function validateRoomId(roomId: unknown): string {
 export function validateClientLogsPayload(body: any): {
   roomId: string;
   userId: string | undefined;
-  logs: any[];
+  logs: Array<{ timestamp: number; [key: string]: any }>;
 } {
   const roomId = validateRoomId(body?.roomId);
   const logs = body?.logs;
   if (!Array.isArray(logs) || logs.length === 0) {
     throw new Error("client logs payload must include non-empty logs");
   }
+  logs.forEach((log) => {
+    if (typeof log?.timestamp !== "number" || !Number.isFinite(log.timestamp)) {
+      throw new Error("invalid log timestamp");
+    }
+  });
   return {
     roomId,
     userId: body?.userId,
@@ -140,8 +145,8 @@ export class LocalSnapshotHandler {
     try {
       const buf = await readFile(path);
       return Buffer.from(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer);
-    } catch (err) {
-      if (err.message.indexOf("ENOENT: no such file or directory") > -1) {
+    } catch (err: any) {
+      if (err?.code === "ENOENT") {
         return null;
       } else {
         throw err;

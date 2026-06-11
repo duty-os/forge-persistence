@@ -47,6 +47,8 @@ assert.deepStrictEqual(
 assert.throws(() => validateClientLogsPayload({ roomId: "room-a", logs: [] }), /non-empty logs/);
 assert.throws(() => validateClientLogsPayload({ roomId: "room-a" }), /non-empty logs/);
 assert.throws(() => validateClientLogsPayload({ roomId: "../bad", logs: [{ timestamp: 1 }] }), /invalid roomId/);
+assert.throws(() => validateClientLogsPayload({ roomId: "room-a", logs: [{ level: "info" }] }), /invalid log timestamp/);
+assert.throws(() => validateClientLogsPayload({ roomId: "room-a", logs: [{ timestamp: NaN }] }), /invalid log timestamp/);
 
 (async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "file-path-safety-"));

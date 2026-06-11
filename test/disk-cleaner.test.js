@@ -181,38 +181,6 @@ assert.deepStrictEqual(classifyManagedFile("logs/clientlogs/room-a.log"), {
   assert.strictEqual(result.overLimit, false);
 }
 
-{
-  const logger = {
-    info() {},
-    error() {},
-  };
-  let processUnhandled = false;
-  const onUnhandled = () => {
-    processUnhandled = true;
-  };
-  process.once("unhandledRejection", onUnhandled);
-
-  const cleaner = new DiskCleaner({
-    paths: {
-      snapshotDataPath: "/tmp/does-not-matter",
-      serverLogFilePath: "/tmp/does-not-matter/server.log",
-      clientLogPath: "/tmp/does-not-matter/clientlogs",
-    },
-    policy: DEFAULT_DISK_RETENTION_POLICY,
-    logger,
-  });
-
-  cleaner.run = async () => {
-    throw new Error("background-cleanup-failed");
-  };
-  cleaner.requestRun("test");
-
-  setTimeout(() => {
-    process.removeListener("unhandledRejection", onUnhandled);
-    assert.strictEqual(processUnhandled, false);
-  }, 20);
-}
-
 function writeFile(root, relativePath, content, ageDays) {
   const filePath = path.join(root, relativePath);
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -223,6 +191,77 @@ function writeFile(root, relativePath, content, ageDays) {
 }
 
 (async () => {
+  {
+    const logger = {
+      info() {},
+      error() {},
+    };
+    let processUnhandled = false;
+    const onUnhandled = () => {
+      processUnhandled = true;
+    };
+    process.once("unhandledRejection", onUnhandled);
+
+    const cleaner = new DiskCleaner({
+      paths: {
+        snapshotDataPath: "/tmp/does-not-matter",
+        serverLogFilePath: "/tmp/does-not-matter/server.log",
+        clientLogPath: "/tmp/does-not-matter/clientlogs",
+      },
+      policy: DEFAULT_DISK_RETENTION_POLICY,
+      logger,
+    });
+
+    cleaner.minFreeBytes = async () => {
+      throw new Error("background-cleanup-failed");
+    };
+    cleaner.requestRun("test");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    process.removeListener("unhandledRejection", onUnhandled);
+    assert.strictEqual(processUnhandled, false);
+  }
+
+  {
+    const logger = {
+      info() {},
+      error() {},
+    };
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "disk-cleaner-concurrent-"));
+    writeFile(root, "data/room-x/old.snapshot", "old", 20);
+    let releaseDelete;
+    const holdDelete = new Promise((resolve) => {
+      releaseDelete = resolve;
+    });
+
+    const cleaner = new DiskCleaner({
+      paths: {
+        snapshotDataPath: path.join(root, "data"),
+        serverLogFilePath: path.join(root, "logs/server.log"),
+        clientLogPath: path.join(root, "logs/clientlogs"),
+      },
+      policy: {
+        ...DEFAULT_DISK_RETENTION_POLICY,
+        maxSnapshotHistoryAgeDays: 7,
+        maxSnapshotGB: 1,
+        maxLogGB: 1,
+      },
+      logger,
+      deleteFile: async (file) => {
+        await holdDelete;
+        fs.rmSync(file.path, { force: true });
+      },
+    });
+
+    cleaner.minFreeBytes = async () => 1024;
+    const first = cleaner.run("first");
+    const second = cleaner.run("second");
+    releaseDelete();
+    const [firstResult, secondResult] = await Promise.all([first, second]);
+    assert.strictEqual(firstResult.deletedCount, 1);
+    assert.strictEqual(secondResult.deletedCount, 1);
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "disk-cleaner-"));
   writeFile(root, "data/room-a/latest.snapshot", "latest", 1);
   writeFile(root, "data/room-a/old.snapshot", "old", 20);
@@ -279,6 +318,30 @@ function writeFile(root, relativePath, content, ageDays) {
   assert.strictEqual(cleanupEmptyRoom.deletedCount, 1);
   assert.strictEqual(fs.existsSync(path.join(emptyRoomRoot, "data/room-b")), false);
   fs.rmSync(emptyRoomRoot, { recursive: true, force: true });
+
+  const failureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "disk-cleaner-failure-"));
+  writeFile(failureRoot, "data/room-c/old.snapshot", "old", 20);
+  const failedCleanup = await cleanupDisk({
+    paths: {
+      snapshotDataPath: path.join(failureRoot, "data"),
+      serverLogFilePath: path.join(failureRoot, "logs/server.log"),
+      clientLogPath: path.join(failureRoot, "logs/clientlogs"),
+    },
+    policy: {
+      ...DEFAULT_DISK_RETENTION_POLICY,
+      maxSnapshotHistoryAgeDays: 7,
+      maxSnapshotGB: 1,
+      maxLogGB: 1,
+    },
+    nowMs: now,
+    freeBytes: 1024,
+    deleteFile: async () => {
+      throw new Error("delete failed");
+    },
+  });
+  assert.strictEqual(failedCleanup.errors.length, 1);
+  assert.strictEqual(failedCleanup.overLimit, true);
+  fs.rmSync(failureRoot, { recursive: true, force: true });
 
   const disappearingRoot = fs.mkdtempSync(path.join(os.tmpdir(), "disk-cleaner-disappearing-"));
   const disappearingLog = writeFile(disappearingRoot, "logs/clientlogs/disappearing.log", "client", 1);
