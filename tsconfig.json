@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-        "rootDirs": ["src"],
+        "rootDir": "src",
         "preserveSymlinks": true,
         "declaration": true,
         "sourceMap": true,
@@ -21,9 +21,13 @@
         "esModuleInterop": true,
         "strictNullChecks": true,
     },
+    "include": [
+        "src/**/*"
+    ],
     "exclude": [
         "node_modules",
         "node_modules/@types",
+        "test",
         "scripts"
     ]
 }

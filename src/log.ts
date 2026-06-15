@@ -1,5 +1,6 @@
 import { hostname } from "os";
-import { createWriteStream, writeFileSync } from "fs";
+import { createWriteStream, existsSync, renameSync, statSync } from "fs";
+import path from "path";
 
 export interface LoggerHandler {
   handler(jsonedLog: string);
@@ -29,18 +30,67 @@ export class FileLogger implements LoggerHandler, Logger {
   private globalContext: any;
   private path: string;
   private stream: import("fs").WriteStream;
+  private maxBytes?: number;
+  private currentBytes: number;
+  private rotationFailed = false;
 
-  constructor(path: string) {
+  constructor(path: string, options?: { maxBytes?: number }) {
     this.path = path;
+    this.maxBytes = options?.maxBytes;
     this.globalContext = {
       hostname: hostname(),
     };
+    try {
+      this.currentBytes = existsSync(this.path) ? statSync(this.path).size : 0;
+    } catch {
+      this.currentBytes = 0;
+    }
     this.stream = createWriteStream(this.path, { flags: 'a+' });
   }
 
   handler(jsonedLog: string) {
     console.log(jsonedLog);
-    this.stream.write(jsonedLog + "\r\n");
+    const line = jsonedLog + "\r\n";
+    const lineBytes = Buffer.byteLength(line);
+    this.rotateIfNeeded(lineBytes);
+    this.stream.write(line);
+    this.currentBytes += lineBytes;
+  }
+
+  private rotateIfNeeded(nextBytes: number) {
+    if (this.rotationFailed || !this.maxBytes || this.currentBytes + nextBytes <= this.maxBytes) {
+      return;
+    }
+    this.stream.end();
+    this.stream.close();
+    let rotated = false;
+    if (existsSync(this.path)) {
+      const parsed = path.parse(this.path);
+      const rotatedPath = path.join(parsed.dir, `${parsed.name}.${Date.now()}${parsed.ext}`);
+      try {
+        renameSync(this.path, rotatedPath);
+        rotated = true;
+        this.rotationFailed = false;
+      } catch {
+        this.rotationFailed = true;
+        try {
+          this.currentBytes = existsSync(this.path) ? statSync(this.path).size : 0;
+        } catch {
+          this.currentBytes = 0;
+        }
+      }
+    } else {
+      this.currentBytes = 0;
+    }
+    this.stream = createWriteStream(this.path, { flags: "a+" });
+    if (rotated) {
+      this.currentBytes = 0;
+    }
+  }
+
+  public close() {
+    this.stream.end();
+    this.stream.close();
   }
 
   log(level: "debug" | "info" | "warn" | "error", msg: string, error?: Error, ctx?: any) {

@@ -2,11 +2,22 @@ import express from "express";
 import getRawBody from "raw-body";
 import cors from "cors";
 
-import { clientLogger, config, logger, snapshotHandler } from "./init";
+import { clientLogger, config, diskCleaner, logger, snapshotHandler } from "./init";
+import { requireAdminAccess } from "./admin-auth";
 import {RawDecoder} from "./RawDecoder";
 import { RawDecoderV2 } from "./RawDecoderV2";
 import { v4 } from 'uuid'
 import { RtmTokenBuilder } from "./rtm-token/RtmTokenBuilder2"
+import { snapshotPublicUrl } from "./url";
+import { validateClientLogsPayload, validateRoomId } from "./file";
+
+function isClientLogRequestError(error: unknown): boolean {
+    return error instanceof SyntaxError || (error instanceof Error && (
+        error.message === "invalid roomId" ||
+        error.message === "client logs payload must include non-empty logs" ||
+        error.message === "invalid log timestamp"
+    ));
+}
 
 export const expressObject = express();
 
@@ -26,17 +37,25 @@ expressObject.use((req, res, next) => {
 });
 
 // 返回房间快照地址
-expressObject.get("/snapshot/:roomId", async (req, res) => {
-    const url = new URL(`${config.snapshotHost}/${req.params.roomId}/snapshots/latest.snapshot`);
-    res.send({ url: url.toString() });
+expressObject.get("/snapshot/:roomId", (req, res) => {
+    try {
+        validateRoomId(req.params.roomId);
+        res.send({ url: snapshotPublicUrl(req, config, req.params.roomId) });
+    } catch (e: any) {
+        res.status(400).send({ status: "fail", message: e.message });
+    }
 });
 
-expressObject.get("/v2/snapshot/:roomId", async (req, res) => {
-    const url = new URL(`${config.snapshotHost}/${req.params.roomId}/snapshots/latest.snapshot`);
-    res.send({
-        url: url.toString(),
-        now: Date.now(),
-    });
+expressObject.get("/v2/snapshot/:roomId", (req, res) => {
+    try {
+        validateRoomId(req.params.roomId);
+        res.send({
+            url: snapshotPublicUrl(req, config, req.params.roomId),
+            now: Date.now(),
+        });
+    } catch (e: any) {
+        res.status(400).send({ status: "fail", message: e.message });
+    }
 });
 
 expressObject.get("/:roomId/snapshots/latest.snapshot", async (req, res) => {
@@ -62,23 +81,33 @@ expressObject.get("/:roomId/snapshots/latest.snapshot", async (req, res) => {
 
 // 记录客户端日志
 expressObject.put("/client/logs", async (req, res) => {
-    const raw = await getRawBody(req);
-    const body = JSON.parse(raw.toString());
-    const { logs: inputLogs, roomId, userId } = body;
+    try {
+        const raw = await getRawBody(req);
+        const body = JSON.parse(raw.toString());
+        const { logs: inputLogs, roomId, userId } = validateClientLogsPayload(body);
 
-    const last = inputLogs[inputLogs.length - 1];
-    const offset = Date.now() - last.timestamp;
-    const logs = inputLogs.map((log: any) => {
-        const completeLog = { ...log, roomId, userId };
-        return {
-            time: Math.floor((log.timestamp + offset) / 1000),
-            contents: Object.keys(completeLog).map(key => {
-                return { key, value: `${completeLog[key]}` };
-            })
-        };
-    });
-    clientLogger.putLogs(roomId, logs);
-    res.status(201).end();
+        const last = inputLogs[inputLogs.length - 1];
+        const offset = Date.now() - last.timestamp;
+        const logs = inputLogs.map((log: any) => {
+            const completeLog = { ...log, roomId, userId };
+            return {
+                time: Math.floor((log.timestamp + offset) / 1000),
+                contents: Object.keys(completeLog).map(key => {
+                    return { key, value: `${completeLog[key]}` };
+                })
+            };
+        });
+        clientLogger.putLogs(roomId, logs);
+        diskCleaner.requestRun("client-log-write");
+        res.status(201).end();
+    } catch (e: any) {
+        if (isClientLogRequestError(e)) {
+            res.status(400).send({ status: "fail", message: e.message });
+            return;
+        }
+        logger.error("client log upload failed", e as Error);
+        res.status(500).send({ status: "fail", message: e.message });
+    }
 });
 
 // 保存客户端上传的房间快照
@@ -89,6 +118,7 @@ expressObject.put("/snapshot", async (req, res) => {
         const decoder = new RawDecoder();
         const buf = decoder.decodeSnapshot(body);
         const { roomId } = decoder;
+        validateRoomId(roomId);
 
         if (buf.length > 0) {
             const now = Date.now();
@@ -97,11 +127,17 @@ expressObject.put("/snapshot", async (req, res) => {
             // todo 自行决定保存位置
             logger.info("房间 uuid: " + roomId);
             // console.log("快照: ", uploadBuffer);
-            snapshotHandler.putSnapshot(roomId, uploadBuffer);
+            await snapshotHandler.putSnapshot(roomId, uploadBuffer);
+            diskCleaner.requestRun("snapshot-write");
         }
         res.status(200).send({ status: "ok" });
-    } catch (e) {
-        res.status(500).send({ status: "fail" });
+    } catch (e: any) {
+        if (e instanceof Error && e.message === "invalid roomId") {
+            res.status(400).send({ status: "fail", message: e.message });
+            return;
+        }
+        logger.error("snapshot upload failed", e as Error);
+        res.status(500).send({ status: "fail", message: e.message });
     }
 });
 
@@ -139,6 +175,25 @@ expressObject.post("/v5/rooms", async (req, res) => {
         res.status(500).send({ status: "fail", message: e.message });
     }
 })
+
+const requireAdminToken = requireAdminAccess(config.adminToken);
+
+expressObject.get("/admin/disk/cleanup/status", requireAdminToken, async (req, res) => {
+    res.status(200).send({
+        status: "ok",
+        cleanup: diskCleaner.getStatus(),
+    });
+});
+
+expressObject.post("/admin/disk/cleanup", requireAdminToken, async (req, res) => {
+    try {
+        const result = await diskCleaner.run("manual");
+        res.status(200).send({ status: "ok", result });
+    } catch (e: any) {
+        logger.error("manual disk cleanup failed", e as Error);
+        res.status(500).send({ status: "fail", message: e.message });
+    }
+});
 
 expressObject.get("/v5/rooms/:roomId", async (req, res) => {
     try {
@@ -192,6 +247,7 @@ expressObject.post("/v5/tokens/rooms/:roomId", async (req, res) => {
 
 
 expressObject.listen(3000, () => {
+    diskCleaner.start();
     logger.info(`app listening at http://0.0.0.0:3000`);
 });
 
