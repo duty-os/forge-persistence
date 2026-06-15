@@ -6,6 +6,8 @@ const { execFileSync } = require("child_process");
 const root = path.join(__dirname, "..");
 const buildpack = fs.readFileSync(path.join(root, "buildpack.sh"), "utf8");
 
+assert(!buildpack.includes("/private/tmp/forge-persistence-package"));
+assert(!buildpack.includes("sed -i.bak"));
 assert(buildpack.includes("deploy/docker-compose.base.app.yaml"));
 assert(buildpack.includes("deploy/docker-compose.base.nginx.yaml"));
 assert(buildpack.includes("docker-compose.override.yaml.example"));
@@ -13,6 +15,9 @@ assert(buildpack.includes("deploy/manifest.json"));
 assert(buildpack.includes("> checksums.sha256"));
 assert(buildpack.includes("shasum -a 256"));
 assert(buildpack.includes("cd deploy"));
+assert(buildpack.includes("nginx.http.conf"));
+assert(buildpack.includes("nginx.https.conf"));
+assert(buildpack.includes("scripts/print-next-steps.sh"));
 
 const manifestPath = path.join(root, "deploy", "manifest.json");
 assert(fs.existsSync(manifestPath));

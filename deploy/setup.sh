@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-export VERSION=1.0.3
+export VERSION=1.0.4
 COMMAND="${1:-setup}"
 MODE="${2:-app}"
 
@@ -70,6 +70,7 @@ run_init() {
 run_setup() {
   local mode="$1"
 
+  run_init "$mode"
   verify_package
   node ./scripts/validate-config.js --file config/app.json --mode "$mode"
   cp "docker-compose.base.${mode}.yaml" docker-compose.generated.yaml

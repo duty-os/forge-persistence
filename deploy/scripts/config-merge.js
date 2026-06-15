@@ -31,6 +31,12 @@ function mergeConfig(existing, defaults) {
   if (normalized.admin && typeof normalized.admin.allowRemoteAccess !== "boolean") {
     normalized.admin.allowRemoteAccess = false;
   }
+  if (normalized.rtm && typeof normalized.rtm.bootstrapMode !== "boolean") {
+    normalized.rtm.bootstrapMode = (
+      normalized.rtm.appId === "project-appid" ||
+      normalized.rtm.appCertificate === "project-appcertificate"
+    );
+  }
 
   deepMergePreserve(merged, normalized);
   merged.configVersion = defaults.configVersion;

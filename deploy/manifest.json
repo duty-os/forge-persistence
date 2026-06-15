@@ -1,14 +1,14 @@
 {
-  "packageVersion": "1.0.3",
+  "packageVersion": "1.0.4",
   "configSchemaVersion": 2,
   "defaultMode": "app",
   "supportedModes": ["app", "nginx"],
   "artifacts": {
-    "appImageTar": "forge-persistence-private-1.0.3.tar",
+    "appImageTar": "forge-persistence-private-1.0.4.tar",
     "nginxImageTar": "nginx.tar"
   },
   "images": {
-    "app": "registry.netless.link/app/forge-persistence-private:1.0.3",
+    "app": "registry.netless.link/app/forge-persistence-private:1.0.4",
     "nginx": "nginx:1.27.5-alpine"
   }
 }

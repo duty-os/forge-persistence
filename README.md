@@ -122,6 +122,11 @@ cd forge-persistence
 
 客户侧自定义 compose 配置只应写在 `docker-compose.override.yaml` 中，不要修改 `docker-compose.generated.yaml`。
 
+打包脚本说明：
+
+- `buildpack.sh`：Linux / CI 交付打包脚本，用于生成最终给客户的安装包
+- `buildpack-local.sh`：本机 macOS 预演 / 自测打包脚本，用于本地先验证安装包和部署流程
+
 如果客户希望直接使用 `https://<ip>/path`，需要确保：
 
 1. 已放置 `config/tls/tls.crt` 和 `config/tls/tls.key`

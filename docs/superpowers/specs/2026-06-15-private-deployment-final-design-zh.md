@@ -486,7 +486,7 @@ docker compose \
 
 ## 构建链路改动
 
-`buildpack.sh` 需要负责：
+`buildpack.sh` 需要负责 Linux / CI 交付打包：
 
 - 生成 base compose
 - 生成 override example
@@ -494,6 +494,12 @@ docker compose \
 - 生成 `checksums.sha256`
 - 更新打包脚本中的版本引用
 - 把辅助脚本一起打进安装包
+
+`buildpack-local.sh` 负责本机 macOS 预演 / 自测：
+
+- 复用与交付包一致的产物结构
+- 处理本机 `sed` / `tar` 兼容性
+- 允许把安装包落到本机临时目录做端到端自检
 
 ## 测试方案
 

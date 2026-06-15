@@ -487,7 +487,7 @@ The merge script should be deterministic and testable.
 
 ## Build Pipeline Changes
 
-`buildpack.sh` should:
+`buildpack.sh` should handle Linux / CI delivery packaging:
 
 - generate base compose files
 - generate override example
@@ -495,6 +495,12 @@ The merge script should be deterministic and testable.
 - generate `checksums.sha256`
 - update packaged script version references
 - include support scripts in install tar
+
+`buildpack-local.sh` should support local macOS rehearsal and self-check flows:
+
+- preserve the same packaged artifact layout as delivery builds
+- handle local `sed` / `tar` compatibility requirements
+- support writing package artifacts to local staging directories for end-to-end validation
 
 ## Test Plan
 

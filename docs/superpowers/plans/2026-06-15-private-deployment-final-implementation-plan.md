@@ -50,7 +50,9 @@ This implementation plan covers 3 deployment modes that must be reflected consis
 - Create: `deploy/docker-compose.override.yaml.example`
   - Customer-owned override template.
 - Modify: `buildpack.sh`
-  - Generate base compose files, manifest, checksums, and package support scripts.
+  - Keep it Linux / CI oriented for customer delivery packaging.
+- Create: `buildpack-local.sh`
+  - Provide a macOS-friendly local rehearsal build script that preserves the same package layout.
 - Create: `deploy/scripts/validate-config.js`
   - Bootstrap-aware config validation.
 - Create: `deploy/scripts/config-merge.js`
