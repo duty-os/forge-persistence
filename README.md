@@ -35,7 +35,29 @@ await wbRoom.joinRoom({
 });
 ```
 
-默认安装模式会暴露 `http://host:3000`。如果通过 `./setup.sh nginx` 启用包内 nginx，则入口改为 `http://host`。当前安装包只提供 HTTP；域名和 HTTPS 建议由客户侧网关、负载均衡、VPN 或 SA 维护的外部反代处理。
+默认安装模式会暴露 `http://host:3000`。如果通过 `./setup.sh init nginx` + `./setup.sh setup nginx` 启用包内 nginx，则默认入口为 `http://host`。nginx 模式保留 `80` 兼容入口，同时支持客户自带证书启用 `443`；如果客户没有证书，也不强制要求使用 HTTPS。
+
+### 部署方式
+
+当前安装包支持这 3 种部署方式：
+
+1. `App` 直连模式
+   - 只启动 `forge-persistence`
+   - 对外暴露 `3000`
+   - 入口示例：`http://<ip>:3000/path`
+   - 适合最简单的内网或调试环境
+
+2. `Nginx HTTP` 模式
+   - 启动 `nginx + forge-persistence`
+   - 对外暴露 `80`
+   - 入口示例：`http://<ip>/path`
+   - 不要求客户提供证书
+
+3. `Nginx HTTPS` 模式
+   - 在 `Nginx HTTP` 模式基础上额外启用 `443`
+   - 入口示例：`https://<ip>/path`
+   - 需要客户提供并信任自己的证书
+   - 启用后 `80` 仍然保留，不强制跳转到 `443`
 
 ### 私有化部署
 
@@ -49,25 +71,62 @@ cd forge-persistence
 默认独立 app 模式：
 
 ```bash
-./setup.sh
+./setup.sh init app
+./setup.sh setup app
 ```
 
-该模式只启动 `forge-persistence`，暴露 `3000:3000`，兼容旧的 `http://host:3000` endpoint。
+该模式只启动 `forge-persistence`，暴露 `3000:3000`，兼容旧的 `http://host:3000` endpoint。首次 `init` 会自动生成 admin token，并写入 `config/app.json`。
 
 可选 nginx 反代模式：
 
 ```bash
-./setup.sh nginx
+./setup.sh init nginx
+./setup.sh setup nginx
 ```
 
-该模式启动 `nginx + forge-persistence`，nginx 暴露 `80:80`，app 只在 compose 内部暴露 `3000`。如需公网访问 admin 清理接口，必须配置强随机 `adminToken` 并通过 `X-Admin-Token` header 调用；公网 HTTP 会明文传输 token，生产环境建议叠加 HTTPS、VPN 或安全组白名单。
+该模式启动 `nginx + forge-persistence`，nginx 暴露 `80:80`，并预留可选 `443:443`，app 只在 compose 内部暴露 `3000`。nginx 默认拒绝远程 `/admin/*`，admin 运维入口保留给容器内本地访问。
 
-首次安装后修改 `config/app.json`：
+如果客户提供证书，可以启用包内 HTTPS：
+
+- 证书路径默认为 `config/tls/tls.crt`
+- 私钥路径默认为 `config/tls/tls.key`
+- 在 `config/app.json` 中把 `tls.enabled` 设为 `true`
+- 然后重新执行 `./setup.sh setup nginx` 或 `./setup.sh upgrade nginx`
+
+启用后可通过 `https://<ip>/path` 访问，但前提是客户端信任这张证书或对应的 CA。若客户使用自签名证书或私有 CA，浏览器、SDK、curl 侧通常也需要额外导入信任。
+
+如果客户没有证书，则保持 `80` 模式即可，`http://<ip>/path` 仍然可用。
+
+首次安装后的 `config/app.json` 会包含 bootstrap 默认值；客户如果需要正式切换，再修改这些字段：
 
 - `rtm.appId`
 - `rtm.appCertificate`
-- `snapshotHost`：客户端可访问的 persistence 地址；默认 app 模式通常是 `http://host:3000`，nginx 模式通常是 `http://host`
-- `adminToken`：用于 `/admin/disk/cleanup*` 的管理 token，必须替换默认占位符；默认占位符不会通过鉴权。建议使用 32 bytes 以上随机值
+- `publicBaseUrl`：客户端可访问的 persistence 地址；默认 bootstrap 模式允许为空，此时服务会回退到请求头生成 snapshot URL。正式部署建议填写稳定外部地址
+- `admin.token`：`init` 会自动生成；如需轮换可自行修改
+- `tls.enabled`：是否启用包内 HTTPS
+- `tls.certPath` / `tls.keyPath`：客户证书和私钥路径，默认为 `./config/tls/tls.crt` 和 `./config/tls/tls.key`
+
+当前 bootstrap 边界：
+
+- 服务可以在不改配置的情况下启动
+- `publicBaseUrl` 为空时，snapshot URL 会走 bootstrap fallback
+- 如果 `rtm` 仍是默认占位配置，服务仍可启动，但 RTM token 接口会明确报错，提示补充客户自己的凭证
+- nginx 模式下，HTTPS 只有在客户提供证书并启用 `tls.enabled=true` 时才生效
+
+推荐的部署检查：
+
+```bash
+./setup.sh doctor app
+./setup.sh smoke app
+```
+
+客户侧自定义 compose 配置只应写在 `docker-compose.override.yaml` 中，不要修改 `docker-compose.generated.yaml`。
+
+如果客户希望直接使用 `https://<ip>/path`，需要确保：
+
+1. 已放置 `config/tls/tls.crt` 和 `config/tls/tls.key`
+2. `config/app.json` 中 `tls.enabled=true`
+3. 客户端已经信任该证书或其签发 CA
 
 ### 本地落盘内容
 
@@ -115,7 +174,7 @@ Docker json-file logs
 
 ```bash
 sudo docker compose exec forge-persistence curl -s \
-  -H "X-Admin-Token: <adminToken>" \
+  -H "X-Admin-Token: <admin.token>" \
   http://127.0.0.1:3000/admin/disk/cleanup/status
 ```
 
@@ -123,7 +182,7 @@ sudo docker compose exec forge-persistence curl -s \
 
 ```bash
 sudo docker compose exec forge-persistence curl -s -X POST \
-  -H "X-Admin-Token: <adminToken>" \
+  -H "X-Admin-Token: <admin.token>" \
   http://127.0.0.1:3000/admin/disk/cleanup
 ```
 
@@ -140,10 +199,10 @@ tar -czvf forge-persistence-logs-$(date +%Y%m%d%H%M%S).tar.gz logs
 ```bash
 tar -xzvf forge-persistence-private-${NEW_VERSION}-install.tar
 cd forge-persistence
-./setup.sh
+./setup.sh upgrade app
 
 # 如果需要 nginx 反代模式：
-./setup.sh nginx
+./setup.sh upgrade nginx
 ```
 
 ### 服务端接口

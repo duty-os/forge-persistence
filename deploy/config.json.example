@@ -1,10 +1,22 @@
 {
+  "configVersion": 2,
   "serviceType": "localFile",
-  "snapshotHost": "http://localhost:3000",
-  "adminToken": "change-me-to-a-random-32-byte-token",
+  "deployMode": "app",
+  "publicBaseUrl": "",
+  "bootstrapPublicUrl": true,
+  "admin": {
+    "token": "change-me-to-a-random-32-byte-token",
+    "allowRemoteAccess": false
+  },
+  "tls": {
+    "enabled": false,
+    "certPath": "./config/tls.crt",
+    "keyPath": "./config/tls.key"
+  },
   "rtm": {
     "appId": "project-appid",
-    "appCertificate": "project-appcertificate"
+    "appCertificate": "project-appcertificate",
+    "bootstrapMode": true
   },
   "localFile": {
     "snapshotDataPath": "./data",

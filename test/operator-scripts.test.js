@@ -1,0 +1,27 @@
+const assert = require("assert");
+const fs = require("fs");
+const path = require("path");
+
+const root = path.join(__dirname, "..");
+const doctor = fs.readFileSync(path.join(root, "deploy", "scripts", "doctor.sh"), "utf8");
+const smoke = fs.readFileSync(path.join(root, "deploy", "scripts", "smoke-test.sh"), "utf8");
+const setup = fs.readFileSync(path.join(root, "deploy", "setup.sh"), "utf8");
+
+assert(doctor.includes("checksums.sha256"));
+assert(doctor.includes("validate-config.js"));
+assert(doctor.includes("test -w config"));
+assert(doctor.includes("df -k ."));
+assert(doctor.includes("tls=enabled"));
+assert(doctor.includes("cfg.tls.certPath"));
+assert(doctor.includes("cfg.tls.keyPath"));
+
+assert(smoke.includes("/snapshot/test-room"));
+assert(smoke.includes("X-Admin-Token"));
+assert(smoke.includes("/admin/disk/cleanup/status"));
+assert(smoke.includes("https://127.0.0.1"));
+
+assert(setup.includes('config/nginx.conf'));
+assert(setup.includes('backup/nginx.conf'));
+assert(setup.includes('config/tls'));
+
+console.log("operator script tests passed");

@@ -1,0 +1,3 @@
+services:
+  forge-persistence:
+    restart: unless-stopped

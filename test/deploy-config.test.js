@@ -9,24 +9,41 @@ function read(relativePath) {
 
 const config = JSON.parse(read("deploy/config.json.example"));
 assert.strictEqual(config.serviceType, "localFile");
+assert.strictEqual(config.configVersion, 2);
+assert.strictEqual(config.deployMode, "app");
 assert.strictEqual(config.diskRetention.enabled, true);
 assert.strictEqual(config.diskRetention.intervalHours, 1);
 assert.strictEqual(config.diskRetention.maxLogGB, 2);
 assert.strictEqual(config.diskRetention.maxSnapshotGB, 10);
 assert.strictEqual(config.diskRetention.allowDeleteLatestSnapshot, false);
 assert.strictEqual(config.diskRetention.serverLogMaxMB, 100);
-assert.strictEqual(typeof config.adminToken, "string");
-assert(config.adminToken.length >= 32);
+assert.strictEqual(config.bootstrapPublicUrl, true);
+assert.strictEqual(typeof config.admin.token, "string");
+assert.strictEqual(config.admin.allowRemoteAccess, false);
+assert.strictEqual(config.tls.enabled, false);
+assert.strictEqual(config.tls.certPath, "./config/tls.crt");
+assert.strictEqual(config.tls.keyPath, "./config/tls.key");
 
 const nginxConf = read("deploy/nginx.conf");
-assert(nginxConf.includes("listen 80"));
-assert(nginxConf.includes("upstream forge_persistence_upstream"));
-assert(nginxConf.includes("proxy_pass http://forge_persistence_upstream;"));
-assert(!nginxConf.includes("proxy_pass http://forge-persistence:3000"));
-assert(!nginxConf.includes("location /admin/"));
-assert(!nginxConf.includes("return 404"));
+assert(nginxConf.includes("nginx.http.conf"));
+assert(nginxConf.includes("nginx.https.conf"));
 
-const appCompose = read("deploy/docker-compose.app.yaml.example");
+const nginxHttpConf = read("deploy/nginx.http.conf");
+assert(nginxHttpConf.includes("listen 80"));
+assert(nginxHttpConf.includes("upstream forge_persistence_upstream"));
+assert(nginxHttpConf.includes("proxy_pass http://forge_persistence_upstream;"));
+assert(!nginxHttpConf.includes("listen 443 ssl"));
+assert(nginxHttpConf.includes("location /admin/"));
+assert(nginxHttpConf.includes("return 403;"));
+
+const nginxHttpsConf = read("deploy/nginx.https.conf");
+assert(nginxHttpsConf.includes("listen 80"));
+assert(nginxHttpsConf.includes("listen 443 ssl"));
+assert(nginxHttpsConf.includes("ssl_certificate /etc/nginx/tls/tls.crt;"));
+assert(nginxHttpsConf.includes("ssl_certificate_key /etc/nginx/tls/tls.key;"));
+assert(nginxHttpsConf.includes("proxy_pass http://forge_persistence_upstream;"));
+
+const appCompose = read("deploy/docker-compose.base.app.yaml");
 assert(appCompose.includes("forge-persistence:"));
 assert(!appCompose.includes("nginx:"));
 assert(appCompose.includes('"3000:3000"') || appCompose.includes("'3000:3000'"));
@@ -34,7 +51,7 @@ assert(appCompose.includes('driver: "json-file"'));
 assert(appCompose.includes('max-size: "50m"'));
 assert(appCompose.includes('max-file: "3"'));
 
-const nginxCompose = read("deploy/docker-compose.nginx.yaml.example");
+const nginxCompose = read("deploy/docker-compose.base.nginx.yaml");
 assert(nginxCompose.includes("forge-persistence:"));
 assert(nginxCompose.includes("nginx:"));
 assert(nginxCompose.includes("nginx:1.27.5-alpine"));
@@ -42,23 +59,29 @@ assert(!nginxCompose.includes("nginx:latest"));
 assert(!nginxCompose.includes('"3000:3000"'));
 assert(!nginxCompose.includes("'3000:3000'"));
 assert(nginxCompose.includes('"80:80"') || nginxCompose.includes("'80:80'"));
+assert(nginxCompose.includes('"443:443"') || nginxCompose.includes("'443:443'"));
+assert(nginxCompose.includes("./config/tls"));
 assert(nginxCompose.includes('driver: "json-file"'));
 assert(nginxCompose.includes('max-size: "50m"'));
 assert(nginxCompose.includes('max-file: "3"'));
 
+const overrideCompose = read("deploy/docker-compose.override.yaml.example");
+assert(overrideCompose.includes("services:"));
+
 const setup = read("deploy/setup.sh");
-assert(setup.includes('MODE="${1:-app}"'));
-assert(setup.includes('"app")'));
-assert(setup.includes('"nginx")'));
-assert(setup.includes('COMPOSE_FILE="docker-compose.app.yaml"'));
-assert(setup.includes('COMPOSE_FALLBACK="docker-compose.app.yaml.example"'));
-assert(setup.includes('COMPOSE_FILE="docker-compose.nginx.yaml"'));
-assert(setup.includes('COMPOSE_FALLBACK="docker-compose.nginx.yaml.example"'));
-assert(setup.includes('if [ ! -f "$COMPOSE_FILE" ]; then'));
-assert(setup.includes('COMPOSE_FILE="$COMPOSE_FALLBACK"'));
+assert(setup.includes('COMMAND="${1:-setup}"'));
+assert(setup.includes('"init")'));
+assert(setup.includes('"setup")'));
+assert(setup.includes('"upgrade")'));
+assert(setup.includes('"doctor")'));
+assert(setup.includes('"smoke")'));
 assert(setup.includes("nginx.tar"));
-assert(setup.includes("Usage: ./setup.sh [nginx]"));
-assert(setup.includes("cp -n config.json.example config/app.json"));
-assert(setup.includes("cp -n nginx.conf config/nginx.conf"));
+assert(setup.includes('docker-compose.base.${mode}.yaml'));
+assert(setup.includes("docker-compose.override.yaml"));
+assert(setup.includes("config/tls"));
+assert(setup.includes("render_nginx_config"));
+assert(setup.includes("tls.enabled"));
+assert(setup.includes("nginx.http.conf"));
+assert(setup.includes("nginx.https.conf"));
 
 console.log("deploy config tests passed");
