@@ -12,19 +12,28 @@ import {
 } from "./disk-cleaner";
 
 type Config = {
+    configVersion?: number;
     serviceType: "localFile",
+    deployMode?: "app" | "nginx";
     rtm: {
         appId: string;
         appCertificate: string;
-    }
+        bootstrapMode?: boolean;
+    };
     localFile: {
         // historyDataPath: string
         snapshotDataPath: string;
         logFilePath: string;
         clientlogPath: string;
     };
+    publicBaseUrl?: string;
+    bootstrapPublicUrl?: boolean;
     snapshotHost?: string;
     adminToken?: string;
+    admin?: {
+        token: string;
+        allowRemoteAccess?: boolean;
+    };
     diskRetention?: Partial<DiskRetentionPolicy> & {
         serverLogMaxMB?: number;
     };
@@ -32,7 +41,27 @@ type Config = {
 
 const DEFAULT_SERVER_LOG_MAX_MB = 100;
 const configFile = readFileSync("./config/app.json", 'utf8');
-export const config: Config = JSON.parse(configFile);
+const rawConfig: Config = JSON.parse(configFile);
+export const config: Config = {
+    ...rawConfig,
+    configVersion: rawConfig.configVersion ?? 2,
+    deployMode: rawConfig.deployMode ?? "app",
+    publicBaseUrl: rawConfig.publicBaseUrl ?? rawConfig.snapshotHost ?? "",
+    bootstrapPublicUrl: rawConfig.bootstrapPublicUrl ?? !(rawConfig.publicBaseUrl ?? rawConfig.snapshotHost),
+    admin: {
+        token: rawConfig.admin?.token ?? rawConfig.adminToken ?? "",
+        allowRemoteAccess: rawConfig.admin?.allowRemoteAccess ?? false,
+    },
+    rtm: {
+        ...(rawConfig.rtm ?? {}),
+        bootstrapMode: rawConfig.rtm?.bootstrapMode ?? (
+            !rawConfig.rtm?.appId ||
+            !rawConfig.rtm?.appCertificate ||
+            rawConfig.rtm?.appId === "project-appid" ||
+            rawConfig.rtm?.appCertificate === "project-appcertificate"
+        ),
+    },
+};
 if (config.serviceType !== "localFile") {
     throw new Error("only localFile serviceType is supported");
 }

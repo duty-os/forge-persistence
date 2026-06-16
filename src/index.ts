@@ -8,6 +8,7 @@ import {RawDecoder} from "./RawDecoder";
 import { RawDecoderV2 } from "./RawDecoderV2";
 import { v4 } from 'uuid'
 import { RtmTokenBuilder } from "./rtm-token/RtmTokenBuilder2"
+import { createBootstrapTokenError, isBootstrapRtmConfig } from "./bootstrap";
 import { snapshotPublicUrl } from "./url";
 import { validateClientLogsPayload, validateRoomId } from "./file";
 
@@ -176,7 +177,7 @@ expressObject.post("/v5/rooms", async (req, res) => {
     }
 })
 
-const requireAdminToken = requireAdminAccess(config.adminToken);
+const requireAdminToken = requireAdminAccess(config.admin?.token);
 
 expressObject.get("/admin/disk/cleanup/status", requireAdminToken, async (req, res) => {
     res.status(200).send({
@@ -225,6 +226,11 @@ expressObject.get("/v5/rooms", async (req, res) => {
 
 expressObject.post("/:roomId/:userId/rtm/token", async (req, res) => {
     try {
+        if (isBootstrapRtmConfig(config)) {
+            const err = createBootstrapTokenError("configure customer RTM credentials first");
+            res.status(err.status).send({ status: "fail", message: err.message });
+            return;
+        }
         const { roomId, userId } = req.params;
         const token = RtmTokenBuilder.buildToken(config.rtm.appId, config.rtm.appCertificate, userId, 24 * 3600);
         res.status(200).send({ status: "ok", token });
@@ -247,6 +253,12 @@ expressObject.post("/v5/tokens/rooms/:roomId", async (req, res) => {
 
 
 expressObject.listen(3000, () => {
+    if (config.bootstrapPublicUrl) {
+        logger.warn("bootstrap public url fallback is active");
+    }
+    if (isBootstrapRtmConfig(config)) {
+        logger.warn("RTM bootstrap mode is active; token endpoints require customer credentials");
+    }
     diskCleaner.start();
     logger.info(`app listening at http://0.0.0.0:3000`);
 });
