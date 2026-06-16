@@ -105,6 +105,7 @@ cd forge-persistence
 - `admin.token`：`init` 会自动生成；如需轮换可自行修改
 - `tls.enabled`：是否启用包内 HTTPS
 - `tls.certPath` / `tls.keyPath`：当前包内 nginx 模板固定读取 `./config/tls/tls.crt` 和 `./config/tls/tls.key`，不要改成其他路径
+- `rtm.bootstrapMode`：如果已经填入客户真实的 RTM 凭证，请将其设为 `false`，或直接删除该字段让服务按实际凭证自动推断；否则 RTM token 接口仍会按 bootstrap 模式返回 `503`
 
 当前 bootstrap 边界：
 

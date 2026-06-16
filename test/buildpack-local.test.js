@@ -12,5 +12,7 @@ assert(buildpackLocal.includes('tar -czvf forge-persistence-private-$VERSION-ins
 assert(buildpackLocal.includes("perl -0pe"));
 assert(buildpackLocal.includes("forge-persistence-private:$VERSION"));
 assert(!buildpackLocal.includes("forge-persistence-private:latest"));
+assert(buildpackLocal.includes('cp -R deploy/. "$STAGE_DIR/forge-persistence/"'));
+assert(!buildpackLocal.includes('cp -R deploy "$STAGE_DIR/forge-persistence"'));
 
 console.log("buildpack local tests passed");

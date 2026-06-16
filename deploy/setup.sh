@@ -4,6 +4,9 @@ set -euo pipefail
 source "$(dirname "$0")/scripts/docker-common.sh"
 source "$(dirname "$0")/scripts/checksum-verify.sh"
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+
 export VERSION=1.0.4
 COMMAND="${1:-setup}"
 MODE="${2:-app}"

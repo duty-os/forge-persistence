@@ -25,9 +25,12 @@ assert(readme.includes("https://<ip>/path"));
 assert(readme.includes("config/tls/tls.crt"));
 assert(readme.includes("config/tls/tls.key"));
 assert(readme.includes("不要改成其他路径"));
+assert(readme.includes("rtm.bootstrapMode"));
+assert(readme.includes("设为 `false`"));
 
 assert(whiteboardDeployment.includes("config/tls/tls.crt"));
 assert(whiteboardDeployment.includes("config/tls/tls.key"));
+assert(whiteboardDeployment.includes("rtm.bootstrapMode"));
 assert(designZh.includes("./config/tls/tls.crt"));
 assert(designZh.includes("./config/tls/tls.key"));
 assert(designZh.includes("只支持"));

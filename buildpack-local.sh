@@ -60,5 +60,6 @@ EOF
 )
 rm -rf "$STAGE_DIR"
 mkdir -p "$STAGE_DIR"
-cp -R deploy "$STAGE_DIR/forge-persistence"
+mkdir -p "$STAGE_DIR/forge-persistence"
+cp -R deploy/. "$STAGE_DIR/forge-persistence/"
 tar -czvf forge-persistence-private-$VERSION-install.tar -C "$STAGE_DIR" forge-persistence

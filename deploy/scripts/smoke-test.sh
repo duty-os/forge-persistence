@@ -3,6 +3,9 @@ set -euo pipefail
 
 source "$(dirname "$0")/docker-common.sh"
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR/.."
+
 mode="${1:-app}"
 token=$(node -e 'const fs=require("fs"); const cfg=JSON.parse(fs.readFileSync("config/app.json","utf8")); process.stdout.write((cfg.admin && cfg.admin.token) || "");')
 
