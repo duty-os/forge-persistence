@@ -33,6 +33,8 @@ function mergeConfig(existing, defaults) {
   }
   if (normalized.rtm && typeof normalized.rtm.bootstrapMode !== "boolean") {
     normalized.rtm.bootstrapMode = (
+      !normalized.rtm.appId ||
+      !normalized.rtm.appCertificate ||
       normalized.rtm.appId === "project-appid" ||
       normalized.rtm.appCertificate === "project-appcertificate"
     );
