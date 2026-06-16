@@ -206,8 +206,8 @@ The example config should be upgraded to this model:
   },
   "tls": {
     "enabled": false,
-    "certPath": "./config/tls.crt",
-    "keyPath": "./config/tls.key"
+    "certPath": "./config/tls/tls.crt",
+    "keyPath": "./config/tls/tls.key"
   },
   "rtm": {
     "appId": "project-appid",

@@ -8,9 +8,9 @@ STAGE_DIR=/private/tmp/forge-persistence-package
 echo $VERSION
 
 rm -rf deploy/*.tar
-sed "s/forge-persistence-private:latest/forge-persistence-private:$VERSION/" deploy/docker-compose.base.app.yaml > deploy/docker-compose.base.app.yaml.tmp
+perl -0pe "s#image: \\\"registry\\.netless\\.link/app/forge-persistence-private:[^\\\"]+\\\"#image: \\\"registry.netless.link/app/forge-persistence-private:$VERSION\\\"#g" deploy/docker-compose.base.app.yaml > deploy/docker-compose.base.app.yaml.tmp
 mv deploy/docker-compose.base.app.yaml.tmp deploy/docker-compose.base.app.yaml
-sed "s/forge-persistence-private:latest/forge-persistence-private:$VERSION/" deploy/docker-compose.base.nginx.yaml > deploy/docker-compose.base.nginx.yaml.tmp
+perl -0pe "s#image: \\\"registry\\.netless\\.link/app/forge-persistence-private:[^\\\"]+\\\"#image: \\\"registry.netless.link/app/forge-persistence-private:$VERSION\\\"#g" deploy/docker-compose.base.nginx.yaml > deploy/docker-compose.base.nginx.yaml.tmp
 mv deploy/docker-compose.base.nginx.yaml.tmp deploy/docker-compose.base.nginx.yaml
 cat deploy/docker-compose.base.app.yaml
 cat deploy/docker-compose.base.nginx.yaml
@@ -48,6 +48,7 @@ EOF
     nginx.conf \
     nginx.http.conf \
     nginx.https.conf \
+    scripts/docker-common.sh \
     scripts/validate-config.js \
     scripts/config-merge.js \
     scripts/doctor.sh \

@@ -14,13 +14,17 @@ assert(doctor.includes("df -k ."));
 assert(doctor.includes("tls=enabled"));
 assert(doctor.includes("cfg.tls.certPath"));
 assert(doctor.includes("cfg.tls.keyPath"));
-assert(doctor.includes("run_docker_compose") || doctor.includes("docker compose version"));
+assert(doctor.includes("docker-common.sh"));
+assert(doctor.includes("run_docker info"));
+assert(doctor.includes("run_docker_compose version"));
 
 assert(smoke.includes("/snapshot/test-room"));
 assert(smoke.includes("X-Admin-Token"));
 assert(smoke.includes("/admin/disk/cleanup/status"));
 assert(smoke.includes("https://127.0.0.1"));
-assert(smoke.includes("docker compose -f docker-compose.generated.yaml -f docker-compose.override.yaml exec"));
+assert(smoke.includes("docker-common.sh"));
+assert(smoke.includes("run_docker_compose -f docker-compose.generated.yaml -f docker-compose.override.yaml exec"));
+assert(!smoke.includes("docker compose -f docker-compose.generated.yaml -f docker-compose.override.yaml exec"));
 
 assert(setup.includes('config/nginx.conf'));
 assert(setup.includes('backup/nginx.conf'));

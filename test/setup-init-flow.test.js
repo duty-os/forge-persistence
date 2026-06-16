@@ -20,7 +20,7 @@ assert(fs.existsSync(overridePath));
 const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
 assert.strictEqual(config.deployMode, "app");
 assert.strictEqual(typeof config.admin.token, "string");
-assert(config.admin.token.length >= 32);
+assert.strictEqual(config.admin.token.length, 64);
 
 fs.rmSync(tempRoot, { recursive: true, force: true });
 console.log("setup init flow tests passed");

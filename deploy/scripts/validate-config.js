@@ -1,6 +1,11 @@
 function validateConfig(config, options = {}) {
   const strict = Boolean(options.strict);
   const mode = options.mode || config.deployMode;
+  const adminPlaceholder = "change-me-to-a-random-32-byte-token";
+  const bootstrapRtm = (
+    config.rtm?.appId === "project-appid" ||
+    config.rtm?.appCertificate === "project-appcertificate"
+  );
 
   if (config.serviceType !== "localFile") {
     throw new Error("serviceType must be localFile");
@@ -17,6 +22,9 @@ function validateConfig(config, options = {}) {
   if (!config.admin?.token || typeof config.admin.token !== "string" || config.admin.token.length < 32) {
     throw new Error("admin token must be at least 32 characters");
   }
+  if (config.admin.token === adminPlaceholder) {
+    throw new Error("admin token must not use the shipped placeholder value");
+  }
   if (config.tls?.enabled) {
     if (!config.tls.certPath || !config.tls.keyPath) {
       throw new Error("tls certPath and keyPath are required when tls is enabled");
@@ -24,6 +32,9 @@ function validateConfig(config, options = {}) {
   }
   if (!strict && !config.publicBaseUrl && config.bootstrapPublicUrl !== true) {
     throw new Error("public base url is required when bootstrap fallback is disabled");
+  }
+  if (!config.rtm?.bootstrapMode && bootstrapRtm) {
+    throw new Error("RTM bootstrap placeholders require bootstrap mode");
   }
   if (strict && config.rtm?.bootstrapMode) {
     throw new Error("RTM credentials are still in bootstrap mode");

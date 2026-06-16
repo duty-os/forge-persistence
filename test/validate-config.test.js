@@ -13,8 +13,8 @@ const bootstrapConfig = {
   },
   tls: {
     enabled: false,
-    certPath: "./config/tls.crt",
-    keyPath: "./config/tls.key",
+    certPath: "./config/tls/tls.crt",
+    keyPath: "./config/tls/tls.key",
   },
   rtm: {
     appId: "project-appid",
@@ -29,15 +29,30 @@ const bootstrapConfig = {
 };
 
 assert.doesNotThrow(() => validateConfig(bootstrapConfig, { strict: false, mode: "app" }));
-assert.doesNotThrow(() => validateConfig({ ...bootstrapConfig, deployMode: "nginx", tls: { enabled: true, certPath: "./config/tls.crt", keyPath: "./config/tls.key" } }, { strict: false, mode: "nginx" }));
+assert.doesNotThrow(() => validateConfig({ ...bootstrapConfig, deployMode: "nginx", tls: { enabled: true, certPath: "./config/tls/tls.crt", keyPath: "./config/tls/tls.key" } }, { strict: false, mode: "nginx" }));
 assert.throws(() => validateConfig(bootstrapConfig, { strict: true, mode: "app" }), /RTM/i);
 assert.throws(
   () => validateConfig({ ...bootstrapConfig, bootstrapPublicUrl: false }, { strict: false, mode: "app" }),
   /public base url/i
 );
 assert.throws(
-  () => validateConfig({ ...bootstrapConfig, deployMode: "nginx", tls: { enabled: true, certPath: "", keyPath: "./config/tls.key" } }, { strict: false, mode: "nginx" }),
+  () => validateConfig({ ...bootstrapConfig, deployMode: "nginx", tls: { enabled: true, certPath: "", keyPath: "./config/tls/tls.key" } }, { strict: false, mode: "nginx" }),
   /tls/i
+);
+assert.throws(
+  () => validateConfig({ ...bootstrapConfig, admin: { token: "change-me-to-a-random-32-byte-token", allowRemoteAccess: false } }, { strict: false, mode: "app" }),
+  /admin token/i
+);
+assert.throws(
+  () => validateConfig({
+    ...bootstrapConfig,
+    rtm: {
+      appId: "project-appid",
+      appCertificate: "project-appcertificate",
+      bootstrapMode: false,
+    },
+  }, { strict: false, mode: "app" }),
+  /RTM/i
 );
 
 console.log("validate config tests passed");

@@ -13,8 +13,7 @@ assert(setup.includes("run_smoke()"));
 assert(setup.includes("verify_package()"));
 assert(setup.includes("checksums.sha256"));
 assert(setup.includes("manifest.json"));
-assert(setup.includes("run_docker()"));
-assert(setup.includes("run_docker_compose()"));
+assert(setup.includes("source \"$(dirname \"$0\")/scripts/docker-common.sh\""));
 assert(setup.includes("run_init \"$mode\""));
 
 console.log("setup script tests passed");

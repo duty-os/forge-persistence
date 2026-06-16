@@ -21,8 +21,8 @@ assert.strictEqual(config.bootstrapPublicUrl, true);
 assert.strictEqual(typeof config.admin.token, "string");
 assert.strictEqual(config.admin.allowRemoteAccess, false);
 assert.strictEqual(config.tls.enabled, false);
-assert.strictEqual(config.tls.certPath, "./config/tls.crt");
-assert.strictEqual(config.tls.keyPath, "./config/tls.key");
+assert.strictEqual(config.tls.certPath, "./config/tls/tls.crt");
+assert.strictEqual(config.tls.keyPath, "./config/tls/tls.key");
 
 const nginxConf = read("deploy/nginx.conf");
 assert(nginxConf.includes("nginx.http.conf"));
@@ -83,5 +83,6 @@ assert(setup.includes("render_nginx_config"));
 assert(setup.includes("tls.enabled"));
 assert(setup.includes("nginx.http.conf"));
 assert(setup.includes("nginx.https.conf"));
+assert(setup.includes("scripts/docker-common.sh"));
 
 console.log("deploy config tests passed");

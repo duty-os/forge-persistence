@@ -1,10 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
+source "$(dirname "$0")/docker-common.sh"
+
 mode="${1:-app}"
 
-docker --version >/dev/null
-docker compose version >/dev/null
+run_docker info >/dev/null
+run_docker_compose version >/dev/null
 shasum -a 256 -c checksums.sha256 >/dev/null
 node ./scripts/validate-config.js --file config/app.json --mode "$mode"
 test -w config

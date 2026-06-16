@@ -1,28 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
+source "$(dirname "$0")/scripts/docker-common.sh"
+
 export VERSION=1.0.4
 COMMAND="${1:-setup}"
 MODE="${2:-app}"
 
 usage() {
   echo "Usage: ./setup.sh <init|setup|upgrade|doctor|smoke> [app|nginx]"
-}
-
-run_docker() {
-  if docker info >/dev/null 2>&1; then
-    docker "$@"
-    return
-  fi
-  sudo docker "$@"
-}
-
-run_docker_compose() {
-  if docker compose version >/dev/null 2>&1; then
-    docker compose "$@"
-    return
-  fi
-  sudo docker compose "$@"
 }
 
 verify_package() {
@@ -53,7 +39,7 @@ run_init() {
   mkdir -p config logs data backup
   if [ ! -f config/app.json ]; then
     cp config.json.example config/app.json
-    node -e 'const fs=require("fs"); const crypto=require("crypto"); const file="config/app.json"; const config=JSON.parse(fs.readFileSync(file,"utf8")); config.deployMode=process.argv[1]; config.admin.token=crypto.randomBytes(24).toString("hex"); fs.writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`);' "$mode"
+    node -e 'const fs=require("fs"); const crypto=require("crypto"); const file="config/app.json"; const config=JSON.parse(fs.readFileSync(file,"utf8")); config.deployMode=process.argv[1]; config.admin.token=crypto.randomBytes(32).toString("hex"); fs.writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`);' "$mode"
   fi
   if [ ! -f docker-compose.override.yaml ]; then
     cp docker-compose.override.yaml.example docker-compose.override.yaml
