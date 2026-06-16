@@ -43,6 +43,14 @@ render_nginx_config() {
       echo "tls certificates must stay under ./config/tls as tls.crt/tls.key" >&2
       return 1
     }
+    [ -f "$cert_path" ] || {
+      echo "missing tls certificate file: $cert_path" >&2
+      return 1
+    }
+    [ -f "$key_path" ] || {
+      echo "missing tls key file: $key_path" >&2
+      return 1
+    }
     cp nginx.https.conf config/nginx.conf
   else
     cp nginx.http.conf config/nginx.conf

@@ -13,5 +13,7 @@ assert(initSource.includes("!rawConfig.rtm?.appCertificate"));
 assert(bootstrapSource.includes("config.rtm?.bootstrapMode === true"));
 assert(bootstrapSource.includes("!config.rtm?.appId"));
 assert(bootstrapSource.includes("!config.rtm?.appCertificate"));
+assert(bootstrapSource.includes('config.rtm?.appId === "project-appid"'));
+assert(bootstrapSource.includes('config.rtm?.appCertificate === "project-appcertificate"'));
 
 console.log("bootstrap config tests passed");
