@@ -2,10 +2,15 @@ function validateConfig(config, options = {}) {
   const strict = Boolean(options.strict);
   const mode = options.mode || config.deployMode;
   const adminPlaceholder = "change-me-to-a-random-32-byte-token";
+  const rtmAppId = config.rtm?.appId;
+  const rtmAppCertificate = config.rtm?.appCertificate;
   const bootstrapRtm = (
-    config.rtm?.appId === "project-appid" ||
-    config.rtm?.appCertificate === "project-appcertificate"
+    !rtmAppId ||
+    !rtmAppCertificate ||
+    rtmAppId === "project-appid" ||
+    rtmAppCertificate === "project-appcertificate"
   );
+  const effectiveBootstrapMode = config.rtm?.bootstrapMode ?? bootstrapRtm;
 
   if (config.serviceType !== "localFile") {
     throw new Error("serviceType must be localFile");
@@ -29,14 +34,17 @@ function validateConfig(config, options = {}) {
     if (!config.tls.certPath || !config.tls.keyPath) {
       throw new Error("tls certPath and keyPath are required when tls is enabled");
     }
+    if (config.tls.certPath !== "./config/tls/tls.crt" || config.tls.keyPath !== "./config/tls/tls.key") {
+      throw new Error("tls certificates must stay under ./config/tls as tls.crt/tls.key");
+    }
   }
   if (!strict && !config.publicBaseUrl && config.bootstrapPublicUrl !== true) {
     throw new Error("public base url is required when bootstrap fallback is disabled");
   }
-  if (!config.rtm?.bootstrapMode && bootstrapRtm) {
+  if (config.rtm?.bootstrapMode === false && bootstrapRtm) {
     throw new Error("RTM bootstrap placeholders require bootstrap mode");
   }
-  if (strict && config.rtm?.bootstrapMode) {
+  if (strict && effectiveBootstrapMode) {
     throw new Error("RTM credentials are still in bootstrap mode");
   }
   if (strict && !config.publicBaseUrl) {

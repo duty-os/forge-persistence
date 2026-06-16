@@ -6,6 +6,7 @@ const root = path.join(__dirname, "..");
 const doctor = fs.readFileSync(path.join(root, "deploy", "scripts", "doctor.sh"), "utf8");
 const smoke = fs.readFileSync(path.join(root, "deploy", "scripts", "smoke-test.sh"), "utf8");
 const setup = fs.readFileSync(path.join(root, "deploy", "setup.sh"), "utf8");
+const checksum = fs.readFileSync(path.join(root, "deploy", "scripts", "checksum-verify.sh"), "utf8");
 
 assert(doctor.includes("checksums.sha256"));
 assert(doctor.includes("validate-config.js"));
@@ -17,6 +18,9 @@ assert(doctor.includes("cfg.tls.keyPath"));
 assert(doctor.includes("docker-common.sh"));
 assert(doctor.includes("run_docker info"));
 assert(doctor.includes("run_docker_compose version"));
+assert(doctor.includes("checksum-verify.sh"));
+assert(checksum.includes("sha256sum"));
+assert(checksum.includes("shasum -a 256 -c"));
 
 assert(smoke.includes("/snapshot/test-room"));
 assert(smoke.includes("X-Admin-Token"));
@@ -29,5 +33,6 @@ assert(!smoke.includes("docker compose -f docker-compose.generated.yaml -f docke
 assert(setup.includes('config/nginx.conf'));
 assert(setup.includes('backup/nginx.conf'));
 assert(setup.includes('config/tls'));
+assert(setup.includes("checksum-verify.sh"));
 
 console.log("operator script tests passed");

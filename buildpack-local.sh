@@ -49,6 +49,7 @@ EOF
     nginx.http.conf \
     nginx.https.conf \
     scripts/docker-common.sh \
+    scripts/checksum-verify.sh \
     scripts/validate-config.js \
     scripts/config-merge.js \
     scripts/doctor.sh \

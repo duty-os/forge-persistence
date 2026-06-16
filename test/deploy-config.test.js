@@ -84,5 +84,6 @@ assert(setup.includes("tls.enabled"));
 assert(setup.includes("nginx.http.conf"));
 assert(setup.includes("nginx.https.conf"));
 assert(setup.includes("scripts/docker-common.sh"));
+assert(setup.includes("tls certificates must stay under ./config/tls"));
 
 console.log("deploy config tests passed");

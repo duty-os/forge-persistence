@@ -2,12 +2,13 @@
 set -euo pipefail
 
 source "$(dirname "$0")/docker-common.sh"
+source "$(dirname "$0")/checksum-verify.sh"
 
 mode="${1:-app}"
 
 run_docker info >/dev/null
 run_docker_compose version >/dev/null
-shasum -a 256 -c checksums.sha256 >/dev/null
+verify_checksums checksums.sha256
 node ./scripts/validate-config.js --file config/app.json --mode "$mode"
 test -w config
 test -w logs

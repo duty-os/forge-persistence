@@ -55,6 +55,8 @@ export const config: Config = {
     rtm: {
         ...rawConfig.rtm,
         bootstrapMode: rawConfig.rtm?.bootstrapMode ?? (
+            !rawConfig.rtm?.appId ||
+            !rawConfig.rtm?.appCertificate ||
             rawConfig.rtm?.appId === "project-appid" ||
             rawConfig.rtm?.appCertificate === "project-appcertificate"
         ),

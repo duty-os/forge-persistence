@@ -282,7 +282,7 @@ Validation has two modes:
 - `localFile.logFilePath` ends with `server.log`
 - `localFile.clientlogPath` exists or can be created
 - admin token exists and is at least 32 bytes after `init`
-- when `tls.enabled=true`, both `tls.certPath` and `tls.keyPath` must be non-empty
+- when `tls.enabled=true`, both `tls.certPath` and `tls.keyPath` must be non-empty, and this version only supports `./config/tls/tls.crt` and `./config/tls/tls.key`
 
 ### Allowed in bootstrap mode
 

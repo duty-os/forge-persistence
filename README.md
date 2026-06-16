@@ -104,7 +104,7 @@ cd forge-persistence
 - `publicBaseUrl`：客户端可访问的 persistence 地址；默认 bootstrap 模式允许为空，此时服务会回退到请求头生成 snapshot URL。正式部署建议填写稳定外部地址
 - `admin.token`：`init` 会自动生成；如需轮换可自行修改
 - `tls.enabled`：是否启用包内 HTTPS
-- `tls.certPath` / `tls.keyPath`：客户证书和私钥路径，默认为 `./config/tls/tls.crt` 和 `./config/tls/tls.key`
+- `tls.certPath` / `tls.keyPath`：当前包内 nginx 模板固定读取 `./config/tls/tls.crt` 和 `./config/tls/tls.key`，不要改成其他路径
 
 当前 bootstrap 边界：
 

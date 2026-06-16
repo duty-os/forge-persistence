@@ -281,7 +281,7 @@ Bootstrap 警告必须体现在：
 - `localFile.logFilePath` 必须以 `server.log` 结尾
 - `localFile.clientlogPath` 存在或可创建
 - `init` 完成后 admin token 必须存在且长度至少 32
-- 当 `tls.enabled=true` 时，`tls.certPath` 和 `tls.keyPath` 必须非空
+- 当 `tls.enabled=true` 时，`tls.certPath` 和 `tls.keyPath` 必须非空，且当前版本只支持 `./config/tls/tls.crt` 和 `./config/tls/tls.key`
 
 ### bootstrap 模式允许
 

@@ -54,5 +54,31 @@ assert.throws(
   }, { strict: false, mode: "app" }),
   /RTM/i
 );
+assert.doesNotThrow(
+  () => validateConfig({
+    ...bootstrapConfig,
+    rtm: {
+      appId: "project-appid",
+      appCertificate: "project-appcertificate",
+    },
+  }, { strict: false, mode: "app" })
+);
+assert.doesNotThrow(
+  () => validateConfig({
+    ...bootstrapConfig,
+    rtm: {},
+  }, { strict: false, mode: "app" })
+);
+assert.throws(
+  () => validateConfig({
+    ...bootstrapConfig,
+    tls: {
+      enabled: true,
+      certPath: "./elsewhere/custom.crt",
+      keyPath: "./elsewhere/custom.key",
+    },
+  }, { strict: false, mode: "nginx" }),
+  /tls/i
+);
 
 console.log("validate config tests passed");

@@ -19,6 +19,7 @@ assert(buildpack.includes("nginx.http.conf"));
 assert(buildpack.includes("nginx.https.conf"));
 assert(buildpack.includes("scripts/print-next-steps.sh"));
 assert(buildpack.includes("scripts/docker-common.sh"));
+assert(buildpack.includes("scripts/checksum-verify.sh"));
 
 const manifestPath = path.join(root, "deploy", "manifest.json");
 assert(fs.existsSync(manifestPath));

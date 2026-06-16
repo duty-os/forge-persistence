@@ -24,12 +24,15 @@ assert(readme.includes("tls.key"));
 assert(readme.includes("https://<ip>/path"));
 assert(readme.includes("config/tls/tls.crt"));
 assert(readme.includes("config/tls/tls.key"));
+assert(readme.includes("不要改成其他路径"));
 
 assert(whiteboardDeployment.includes("config/tls/tls.crt"));
 assert(whiteboardDeployment.includes("config/tls/tls.key"));
 assert(designZh.includes("./config/tls/tls.crt"));
 assert(designZh.includes("./config/tls/tls.key"));
+assert(designZh.includes("只支持"));
 assert(designEn.includes("./config/tls/tls.crt"));
 assert(designEn.includes("./config/tls/tls.key"));
+assert(designEn.includes("only supports"));
 
 console.log("readme private deploy tests passed");

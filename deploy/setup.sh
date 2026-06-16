@@ -2,6 +2,7 @@
 set -euo pipefail
 
 source "$(dirname "$0")/scripts/docker-common.sh"
+source "$(dirname "$0")/scripts/checksum-verify.sh"
 
 export VERSION=1.0.4
 COMMAND="${1:-setup}"
@@ -14,7 +15,7 @@ usage() {
 verify_package() {
   [ -f manifest.json ]
   [ -f checksums.sha256 ]
-  shasum -a 256 -c checksums.sha256 >/dev/null
+  verify_checksums checksums.sha256
 }
 
 render_nginx_config() {
@@ -24,9 +25,21 @@ render_nginx_config() {
     return
   fi
 
+  local cert_path
+  local key_path
   local tls_enabled
   tls_enabled=$(node -e 'const fs=require("fs"); const cfg=JSON.parse(fs.readFileSync("config/app.json","utf8")); process.stdout.write(cfg.tls && cfg.tls.enabled ? "true" : "false");')
   if [ "$tls_enabled" = "true" ]; then
+    cert_path=$(node -e 'const fs=require("fs"); const cfg=JSON.parse(fs.readFileSync("config/app.json","utf8")); process.stdout.write(cfg.tls.certPath);')
+    key_path=$(node -e 'const fs=require("fs"); const cfg=JSON.parse(fs.readFileSync("config/app.json","utf8")); process.stdout.write(cfg.tls.keyPath);')
+    [ "$cert_path" = "./config/tls/tls.crt" ] || {
+      echo "tls certificates must stay under ./config/tls as tls.crt/tls.key" >&2
+      return 1
+    }
+    [ "$key_path" = "./config/tls/tls.key" ] || {
+      echo "tls certificates must stay under ./config/tls as tls.crt/tls.key" >&2
+      return 1
+    }
     cp nginx.https.conf config/nginx.conf
   else
     cp nginx.http.conf config/nginx.conf
