@@ -32,7 +32,15 @@ cat > deploy/manifest.json <<EOF
 EOF
 (
   cd deploy
-  shasum -a 256 \
+  if command -v shasum >/dev/null 2>&1; then
+    SUM_CMD="shasum -a 256"
+  elif command -v sha256sum >/dev/null 2>&1; then
+    SUM_CMD="sha256sum"
+  else
+    echo "missing checksum tool: need shasum or sha256sum" >&2
+    exit 1
+  fi
+  $SUM_CMD \
     manifest.json \
     config.json.example \
     setup.sh \

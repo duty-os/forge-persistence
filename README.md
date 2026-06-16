@@ -180,7 +180,7 @@ Docker json-file logs
 
 ```bash
 sudo docker compose exec forge-persistence curl -s \
-  -H "X-Admin-Token: <admin.token>" \
+  -H "X-Admin-Token: <ADMIN_TOKEN>" \
   http://127.0.0.1:3000/admin/disk/cleanup/status
 ```
 
@@ -188,7 +188,7 @@ sudo docker compose exec forge-persistence curl -s \
 
 ```bash
 sudo docker compose exec forge-persistence curl -s -X POST \
-  -H "X-Admin-Token: <admin.token>" \
+  -H "X-Admin-Token: <ADMIN_TOKEN>" \
   http://127.0.0.1:3000/admin/disk/cleanup
 ```
 

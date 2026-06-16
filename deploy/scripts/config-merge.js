@@ -25,8 +25,8 @@ function mergeConfig(existing, defaults) {
   if (normalized.snapshotHost && !normalized.publicBaseUrl) {
     normalized.publicBaseUrl = normalized.snapshotHost;
   }
-  if (normalized.adminToken && !normalized.admin) {
-    normalized.admin = { token: normalized.adminToken };
+  if (normalized.adminToken && !normalized.admin?.token) {
+    normalized.admin = { ...(normalized.admin ?? {}), token: normalized.adminToken };
   }
   if (normalized.admin && typeof normalized.admin.allowRemoteAccess !== "boolean") {
     normalized.admin.allowRemoteAccess = false;

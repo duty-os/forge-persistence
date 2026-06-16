@@ -10,7 +10,7 @@ const deployRoot = path.join(tempRoot, "deploy");
 
 fs.cpSync(path.join(root, "deploy"), deployRoot, { recursive: true });
 
-execFileSync("./setup.sh", ["init", "app"], { cwd: deployRoot, stdio: "pipe" });
+execFileSync("bash", ["./setup.sh", "init", "app"], { cwd: deployRoot, stdio: "pipe" });
 
 const configPath = path.join(deployRoot, "config", "app.json");
 const overridePath = path.join(deployRoot, "docker-compose.override.yaml");
