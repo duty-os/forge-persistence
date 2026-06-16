@@ -9,6 +9,9 @@ assert(initSource.includes("rawConfig.rtm?.appCertificate"));
 assert(initSource.includes("bootstrapMode: rawConfig.rtm?.bootstrapMode ??"));
 assert(initSource.includes("!rawConfig.rtm?.appId"));
 assert(initSource.includes("!rawConfig.rtm?.appCertificate"));
+assert(initSource.includes("} ;") || initSource.includes("};") || initSource.includes("},"));
+assert(initSource.includes("...(rawConfig.rtm ?? {})"));
+assert(!initSource.includes("...rawConfig.rtm,"));
 
 assert(bootstrapSource.includes("config.rtm?.bootstrapMode === true"));
 assert(bootstrapSource.includes("!config.rtm?.appId"));

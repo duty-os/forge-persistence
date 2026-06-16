@@ -19,7 +19,7 @@ type Config = {
         appId: string;
         appCertificate: string;
         bootstrapMode?: boolean;
-    }
+    };
     localFile: {
         // historyDataPath: string
         snapshotDataPath: string;
@@ -53,7 +53,7 @@ export const config: Config = {
         allowRemoteAccess: rawConfig.admin?.allowRemoteAccess ?? false,
     },
     rtm: {
-        ...rawConfig.rtm,
+        ...(rawConfig.rtm ?? {}),
         bootstrapMode: rawConfig.rtm?.bootstrapMode ?? (
             !rawConfig.rtm?.appId ||
             !rawConfig.rtm?.appCertificate ||

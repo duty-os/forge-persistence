@@ -15,6 +15,19 @@ usage() {
   echo "Usage: ./setup.sh <init|setup|upgrade|doctor|smoke> [app|nginx]"
 }
 
+require_mode() {
+  local mode="$1"
+
+  case "$mode" in
+    "app"|"nginx")
+      ;;
+    *)
+      echo "invalid deploy mode: $mode" >&2
+      return 1
+      ;;
+  esac
+}
+
 verify_package() {
   [ -f manifest.json ]
   [ -f checksums.sha256 ]
@@ -60,6 +73,7 @@ render_nginx_config() {
 run_init() {
   local mode="$1"
 
+  require_mode "$mode"
   mkdir -p config logs data backup
   if [ ! -f config/app.json ]; then
     cp config.json.example config/app.json
@@ -80,6 +94,7 @@ run_init() {
 run_setup() {
   local mode="$1"
 
+  require_mode "$mode"
   run_init "$mode"
   verify_package
   node ./scripts/validate-config.js --file config/app.json --mode "$mode"
@@ -95,6 +110,7 @@ run_setup() {
 run_upgrade() {
   local mode="$1"
 
+  require_mode "$mode"
   verify_package
   mkdir -p backup
   if [ -f config/app.json ]; then
@@ -112,11 +128,13 @@ run_upgrade() {
 
 run_doctor() {
   local mode="$1"
+  require_mode "$mode"
   bash ./scripts/doctor.sh "$mode"
 }
 
 run_smoke() {
   local mode="$1"
+  require_mode "$mode"
   bash ./scripts/smoke-test.sh "$mode"
 }
 

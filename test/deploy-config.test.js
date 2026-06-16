@@ -87,5 +87,8 @@ assert(setup.includes("scripts/docker-common.sh"));
 assert(setup.includes("tls certificates must stay under ./config/tls"));
 assert(setup.includes('[ -f "$cert_path" ]'));
 assert(setup.includes('[ -f "$key_path" ]'));
+assert(setup.includes('case "$mode" in'));
+assert(setup.includes('"app"|"nginx")'));
+assert(setup.includes('invalid deploy mode'));
 
 console.log("deploy config tests passed");
